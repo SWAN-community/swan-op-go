@@ -44,13 +44,8 @@ const ValidationTimeFormat = "2006-01-02T15:04:05Z07:00"
 func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		// Check caller can access.
-		if s.getAccessAllowed(w, r) == false {
-			return
-		}
-
 		// Get the SWIFT results from the request.
-		o := getSWIFTResults(s, w, r)
+		o := getResults(s, w, r)
 		if o == nil {
 			return
 		}
@@ -135,24 +130,9 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 func handlerDecryptAsJSON(s *services) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		// Check caller can access.
-		if s.getAccessAllowed(w, r) == false {
-			return
-		}
-
 		// Get the SWIFT results from the request.
-		o := getSWIFTResults(s, w, r)
+		o := getResults(s, w, r)
 		if o == nil {
-			return
-		}
-
-		// Validate that the timestamp has not expired.
-		if o.IsTimeStampValid() == false {
-			returnAPIError(
-				&s.config,
-				w,
-				fmt.Errorf("data expired and can no longer be used"),
-				http.StatusBadRequest)
 			return
 		}
 
@@ -175,6 +155,36 @@ func handlerDecryptAsJSON(s *services) http.HandlerFunc {
 		// Send the JSON string.
 		sendGzipJSON(s, w, r, j)
 	}
+}
+
+// getResults validates access, unpacks the results and validates the timestamp.
+func getResults(
+	s *services,
+	w http.ResponseWriter,
+	r *http.Request) *swift.Results {
+
+	// Check caller can access.
+	if s.getAccessAllowed(w, r) == false {
+		return nil
+	}
+
+	// Get the SWIFT results from the request.
+	o := getSWIFTResults(s, w, r)
+	if o == nil {
+		return nil
+	}
+
+	// Validate that the timestamp has not expired.
+	if o.IsTimeStampValid() == false {
+		returnAPIError(
+			&s.config,
+			w,
+			fmt.Errorf("data expired and can no longer be used"),
+			http.StatusBadRequest)
+		return nil
+	}
+
+	return o
 }
 
 // Check that the encrypted parameter is present and if so decodes and decrypts
@@ -379,13 +389,13 @@ func getStopped(p *swift.Pair) (*swan.Pair, error) {
 			s = append(s, string(v))
 		}
 	}
-	return swan.NewPairFromSWIFT(p, strings.Join(s, listSeparator)), nil
+	return newPairFromSWIFT(p, strings.Join(s, listSeparator)), nil
 }
 
 // copyValue turns the SWIFT pair into a SWAN pair taking the first value and
 // base 64 encoding it as a string.
 func copyValue(p *swift.Pair) *swan.Pair {
-	return swan.NewPairFromSWIFT(
+	return newPairFromSWIFT(
 		p,
 		base64.RawStdEncoding.EncodeToString(p.Values()[0]))
 }
@@ -452,4 +462,14 @@ func createSID(email []byte, salt []byte) ([]byte, error) {
 	hasher := sha256.New()
 	hasher.Write(append(o1.Payload, o2.Payload...))
 	return hasher.Sum(nil), nil
+}
+
+// newPairFromSWIFT creates a new SWAN pair from the SWIFT pair setting the
+// value to the byte array provided.
+func newPairFromSWIFT(s *swift.Pair, v string) *swan.Pair {
+	return &swan.Pair{
+		Key:     s.Key(),
+		Created: s.Created(),
+		Expires: s.Expires(),
+		Value:   v}
 }
