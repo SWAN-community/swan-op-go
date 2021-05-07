@@ -459,8 +459,12 @@ func createSID(email []byte, salt []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	s, err := base64.RawStdEncoding.DecodeString(o2.PayloadAsString())
+	if err != nil {
+		return nil, err
+	}
 	hasher := sha256.New()
-	hasher.Write(append(o1.Payload, o2.Payload...))
+	hasher.Write(append(o1.Payload, s...))
 	return hasher.Sum(nil), nil
 }
 
