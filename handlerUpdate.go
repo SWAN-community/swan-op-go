@@ -45,40 +45,51 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			return
 		}
 
-		// Validate that the SWAN values provided are valid OWIDs.
-		err = validateOWID(s, &r.Form, "swid")
-		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
-			return
-		}
-		err = validateOWID(s, &r.Form, "pref")
-		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
-			return
-		}
-		err = validateOWID(s, &r.Form, "email")
-		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
-			return
-		}
-		err = validateOWID(s, &r.Form, "salt")
-		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
-			return
-		}
-
-		// Set the SWAN fields to the values provided.
+		// Get the time when the data should be deleted.
 		t := s.config.DeleteDate().Format("2006-01-02")
-		r.Form.Set(fmt.Sprintf("swid>%s", t), r.Form.Get("swid"))
-		r.Form.Set(fmt.Sprintf("email>%s", t), r.Form.Get("email"))
-		r.Form.Set(fmt.Sprintf("salt>%s", t), r.Form.Get("salt"))
-		r.Form.Set(fmt.Sprintf("pref>%s", t), r.Form.Get("pref"))
-		r.Form.Set(fmt.Sprintf("stop+%s", t), r.Form.Get("stop"))
-		r.Form.Del("swid")
-		r.Form.Del("email")
-		r.Form.Del("salt")
-		r.Form.Del("pref")
-		r.Form.Del("stop")
+
+		// Validate that the SWAN values provided are valid OWIDs and then set
+		// the values.
+		if r.Form.Get("swid") != "" {
+			err = validateOWID(s, &r.Form, "swid")
+			if err != nil {
+				returnAPIError(&s.config, w, err, http.StatusBadRequest)
+				return
+			}
+			r.Form.Set(fmt.Sprintf("swid>%s", t), r.Form.Get("swid"))
+			r.Form.Del("swid")
+		}
+		if r.Form.Get("pref") != "" {
+			err = validateOWID(s, &r.Form, "pref")
+			if err != nil {
+				returnAPIError(&s.config, w, err, http.StatusBadRequest)
+				return
+			}
+			r.Form.Set(fmt.Sprintf("pref>%s", t), r.Form.Get("pref"))
+			r.Form.Del("pref")
+		}
+		if r.Form.Get("email") != "" {
+			err = validateOWID(s, &r.Form, "email")
+			if err != nil {
+				returnAPIError(&s.config, w, err, http.StatusBadRequest)
+				return
+			}
+			r.Form.Set(fmt.Sprintf("email>%s", t), r.Form.Get("email"))
+			r.Form.Del("email")
+		}
+		if r.Form.Get("salt") != "" {
+			err = validateOWID(s, &r.Form, "salt")
+			if err != nil {
+				returnAPIError(&s.config, w, err, http.StatusBadRequest)
+				return
+			}
+			r.Form.Set(fmt.Sprintf("salt>%s", t), r.Form.Get("salt"))
+			r.Form.Del("salt")
+		}
+		if r.Form.Get("stop") != "" {
+			r.Form.Set(fmt.Sprintf("stop+%s", t), r.Form.Get("stop"))
+			r.Form.Del("stop")
+		}
 
 		// Uses the SWIFT access node associated with this internet domain
 		// to determine the URL to direct the browser to.
