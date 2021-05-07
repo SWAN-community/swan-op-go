@@ -49,15 +49,28 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		t := s.config.DeleteDate().Format("2006-01-02")
 
 		// Validate that the SWAN values provided are valid OWIDs and then set
-		// the values.
+		// the values. If the SWID is not provided created a new one to use if
+		// a value does not exist already.
 		if r.Form.Get("swid") != "" {
 			err = validateOWID(s, &r.Form, "swid")
 			if err != nil {
 				returnAPIError(&s.config, w, err, http.StatusBadRequest)
 				return
 			}
+
+			// Use the > sign to indicate the newest value should be used.
 			r.Form.Set(fmt.Sprintf("swid>%s", t), r.Form.Get("swid"))
 			r.Form.Del("swid")
+		} else {
+			swid, err := createSWID(s, r)
+			if err != nil {
+				returnServerError(&s.config, w, err)
+				return
+			}
+
+			// Use the < sign to indicate the oldest, or existing value should
+			// be used.
+			r.Form.Set(fmt.Sprintf("swid<%s", t), swid.AsString())
 		}
 		if r.Form.Get("pref") != "" {
 			err = validateOWID(s, &r.Form, "pref")
