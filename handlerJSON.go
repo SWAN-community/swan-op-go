@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"owid"
+	"salt"
 	"strings"
 	"swan"
 	"swift"
@@ -73,9 +74,21 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 				break
 			case "salt":
 				// Salt is unpacked so that the email hash can be preserved.
+				// The OWID payload has to be converted to a salt.Salt structure
+				// before it can be converted into a base 64 string for use with
+				// the JSON response.
 				b := unpackOWID(s, v)
 				if b != nil {
-					p[v.Key()] = string(b)
+					sa, err := salt.FromByteArray(b)
+					if err != nil {
+						returnAPIError(
+							&s.config,
+							w,
+							err,
+							http.StatusBadRequest)
+						return
+					}
+					p[v.Key()] = sa.ToBase64String()
 				}
 			case "pref":
 				// Allow preferences are unpacked so that the original value can
@@ -450,21 +463,21 @@ func createOWID(s *services, r *http.Request, v []byte) (*owid.OWID, error) {
 }
 
 // Create the SID by salting the email address and creating an sha256 hashes
-func createSID(email []byte, salt []byte) ([]byte, error) {
-	o1, err := owid.FromByteArray(email)
+func createSID(emailOWID []byte, saltOWID []byte) ([]byte, error) {
+	o1, err := owid.FromByteArray(emailOWID)
 	if err != nil {
 		return nil, err
 	}
-	o2, err := owid.FromByteArray(salt)
+	o2, err := owid.FromByteArray(saltOWID)
 	if err != nil {
 		return nil, err
 	}
-	s, err := base64.RawStdEncoding.DecodeString(o2.PayloadAsString())
+	s, err := salt.FromByteArray(o2.Payload)
 	if err != nil {
 		return nil, err
 	}
 	hasher := sha256.New()
-	hasher.Write(append(o1.Payload, s...))
+	hasher.Write(append(o1.Payload, s.GetBytes()...))
 	return hasher.Sum(nil), nil
 }
 
