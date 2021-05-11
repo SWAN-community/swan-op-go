@@ -78,7 +78,7 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 				// before it can be converted into a base 64 string for use with
 				// the JSON response.
 				b := unpackOWID(s, v)
-				if b != nil {
+				if b != nil && len(b) > 0 {
 					sa, err := salt.FromByteArray(b)
 					if err != nil {
 						returnAPIError(
@@ -89,6 +89,8 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 						return
 					}
 					p[v.Key()] = sa.ToBase64String()
+				} else {
+					p[v.Key()] = ""
 				}
 			case "pref":
 				// Allow preferences are unpacked so that the original value can
@@ -472,12 +474,16 @@ func createSID(emailOWID []byte, saltOWID []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	s, err := salt.FromByteArray(o2.Payload)
-	if err != nil {
-		return nil, err
+	var sb []byte
+	if len(o2.Payload) > 0 {
+		s, err := salt.FromByteArray(o2.Payload)
+		if err != nil {
+			return nil, err
+		}
+		sb = s.GetBytes()
 	}
 	hasher := sha256.New()
-	hasher.Write(append(o1.Payload, s.GetBytes()...))
+	hasher.Write(append(o1.Payload, sb...))
 	return hasher.Sum(nil), nil
 }
 
