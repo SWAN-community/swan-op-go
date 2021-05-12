@@ -73,22 +73,12 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 				}
 				break
 			case "salt":
-				// Salt is unpacked so that the email hash can be preserved.
-				// The OWID payload has to be converted to a salt.Salt structure
-				// before it can be converted into a base 64 string for use with
-				// the JSON response.
+				// Salt is unpacked so that the email can be hashed. The payload
+				// of the OWID is the salt as a base 64 string originally
+				// returned from the salt-js JavaScript.
 				b := unpackOWID(s, v)
 				if b != nil && len(b) > 0 {
-					sa, err := salt.FromByteArray(b)
-					if err != nil {
-						returnAPIError(
-							&s.config,
-							w,
-							err,
-							http.StatusBadRequest)
-						return
-					}
-					p[v.Key()] = sa.ToBase64String()
+					p[v.Key()] = string(b)
 				} else {
 					p[v.Key()] = ""
 				}
@@ -319,17 +309,18 @@ func convertPairs(
 		switch v.Key() {
 		case "email":
 			n := p["salt"]
-			if len(v.Values()) > 0 && len(n.Values()) > 0 {
-				// verify email
+			if n != nil && len(v.Values()) > 0 && len(n.Values()) > 0 {
+				// Verify email
 				err = verifyOWIDIfDebug(s, v.Values()[0])
 				if err != nil {
 					return nil, err
 				}
-				// verify salt
+				// Verify salt
 				err = verifyOWIDIfDebug(s, n.Values()[0])
 				if err != nil {
 					return nil, err
 				}
+				// Create the SID
 				s, err := getSID(s, r, v, n)
 				if err != nil {
 					return nil, err
@@ -417,14 +408,21 @@ func copyValue(p *swift.Pair) *swan.Pair {
 
 // getSID turns the email address that is contained in the Value OWID into
 // a hashed version in a new OWID with this SWAN Operator as the creator.
-func getSID(s *services, r *http.Request, p *swift.Pair, n *swift.Pair) (*swan.Pair, error) {
+func getSID(
+	s *services,
+	r *http.Request,
+	email *swift.Pair,
+	salt *swift.Pair) (*swan.Pair, error) {
 	v := &swan.Pair{
 		Key:     "sid",
-		Created: p.Created(),
-		Expires: p.Expires(),
-	}
-	if len(p.Values()[0]) > 0 && len(n.Values()[0]) > 0 {
-		sid, err := createSID(p.Values()[0], n.Values()[0])
+		Created: email.Created(),
+		Expires: email.Expires(),
+		Value:   ""}
+	if email != nil &&
+		salt != nil &&
+		len(email.Values()[0]) > 0 &&
+		len(salt.Values()[0]) > 0 {
+		sid, err := createSID(email.Values()[0], salt.Values()[0])
 		if err != nil {
 			return nil, err
 		}
@@ -464,11 +462,16 @@ func createOWID(s *services, r *http.Request, v []byte) (*owid.OWID, error) {
 	return o, nil
 }
 
-// Create the SID by salting the email address and creating an sha256 hashes
+// Create the SID by salting the email address and creating an sha256 hashes.
+// If the email address is empty or the salt is empty then an empty byte array
+// is returned.
 func createSID(emailOWID []byte, saltOWID []byte) ([]byte, error) {
 	o1, err := owid.FromByteArray(emailOWID)
 	if err != nil {
 		return nil, err
+	}
+	if len(o1.Payload) == 0 {
+		return []byte{}, nil
 	}
 	o2, err := owid.FromByteArray(saltOWID)
 	if err != nil {
@@ -476,7 +479,7 @@ func createSID(emailOWID []byte, saltOWID []byte) ([]byte, error) {
 	}
 	var sb []byte
 	if len(o2.Payload) > 0 {
-		s, err := salt.FromByteArray(o2.Payload)
+		s, err := salt.FromBase64(string(o2.Payload))
 		if err != nil {
 			return nil, err
 		}
