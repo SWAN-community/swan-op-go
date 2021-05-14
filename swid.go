@@ -17,6 +17,7 @@
 package swanop
 
 import (
+	"fmt"
 	"net/http"
 	"owid"
 
@@ -28,6 +29,13 @@ func createSWID(s *services, r *http.Request) (*owid.OWID, error) {
 	c, err := s.owid.GetCreator(r.Host)
 	if err != nil {
 		return nil, err
+	}
+	if c == nil {
+		return nil, fmt.Errorf(
+			"No SWID creator available for host '%s'. "+
+				"Try http[s]://%s/owid/register",
+			r.Host,
+			r.Host)
 	}
 	u, err := uuid.New().MarshalBinary()
 	if err != nil {
