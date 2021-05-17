@@ -103,6 +103,15 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			r.Form.Set(fmt.Sprintf("stop+%s", t), r.Form.Get("stop"))
 			r.Form.Del("stop")
 		}
+		if r.Form.Get("tcString") != "" {
+			err = validateOWID(s, &r.Form, "tcString")
+			if err != nil {
+				returnAPIError(&s.config, w, err, http.StatusBadRequest)
+				return
+			}
+			r.Form.Set(fmt.Sprintf("tcString>%s", t), r.Form.Get("tcString"))
+			r.Form.Del("tcString")
+		}
 
 		// Uses the SWIFT access node associated with this internet domain
 		// to determine the URL to direct the browser to.

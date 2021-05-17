@@ -82,8 +82,9 @@ func setDefaults(s *services, r *http.Request) {
 
 	// Process any exist SWID, preference or stop data provided by the caller.
 	setSWID(s, r, t)
-	setPerf(s, r, t)
 	setStop(s, r, t)
+	setPref(s, r, t)
+	setTcString(s, r, t)
 
 	// Get the email address either to return as the raw value, or to turn into
 	// a SID once it's been fetched. Always favour the most recent email address
@@ -110,26 +111,26 @@ func setStop(s *services, r *http.Request, t time.Time) {
 	r.Form.Del("stop")
 }
 
-// setPerf gets the value of perf from the request and verifies it's a valid
+// setPref gets the value of pref from the request and verifies it's a valid
 // OWID. If it is valid then use it as the default value if the SWAN network
 // does not contain a value. If it is not valid then an empty value will be
 // used to indicate that the user has not provided any preferences.
-func setPerf(s *services, r *http.Request, t time.Time) {
-	v := r.Form.Get("pref") // The value for the Perf. to use if one not found
+func setPref(s *services, r *http.Request, t time.Time) {
+	v := r.Form.Get("pref") // The value for the Pref to use if one not found
 	o, err := owid.FromBase64(v)
 	if err != nil {
 		logNonCriticalError(s, err)
 		v = ""
 	} else {
 
-		// There is a valid OWID for the Perf. Does it meet the rules?
+		// There is a valid OWID for the Pref. Does it meet the rules?
 		b, err := o.Verify(s.config.Scheme)
 		if err != nil {
 			logNonCriticalError(s, err)
 			v = ""
 		} else if b {
 
-			// Change the expiry time to be based on the Perf. creation date.
+			// Change the expiry time to be based on the Pref. creation date.
 			t = o.Date.AddDate(0, 0, s.config.DeleteDays)
 
 			// If the value has already expired then don't use it. If not then
@@ -143,7 +144,7 @@ func setPerf(s *services, r *http.Request, t time.Time) {
 		}
 	}
 
-	// Set the value in the SWIFT storage operation, and remove the perf from
+	// Set the value in the SWIFT storage operation, and remove the pref from
 	// the form.
 	if v != "" {
 
@@ -160,6 +161,58 @@ func setPerf(s *services, r *http.Request, t time.Time) {
 
 	// Remove pref key as this is not valid for a SWIFT operation.
 	r.Form.Del("pref")
+}
+
+// setTcString gets the value of tcString from the request and verifies it's a valid
+// OWID. If it is valid then use it as the default value if the SWAN network
+// does not contain a value. If it is not valid then an empty value will be
+// used to indicate that no tcString was collected.
+func setTcString(s *services, r *http.Request, t time.Time) {
+	v := r.Form.Get("tcString") // The value for the tcString to use if one not found
+	o, err := owid.FromBase64(v)
+	if err != nil {
+		logNonCriticalError(s, err)
+		v = ""
+	} else {
+
+		// There is a valid OWID for the tcString. Does it meet the rules?
+		b, err := o.Verify(s.config.Scheme)
+		if err != nil {
+			logNonCriticalError(s, err)
+			v = ""
+		} else if b {
+
+			// Change the expiry time to be based on the tcString. creation date.
+			t = o.Date.AddDate(0, 0, s.config.DeleteDays)
+
+			// If the value has already expired then don't use it. If not then
+			// use it as the value if the network does not currently contain a
+			// value.
+			if time.Now().UTC().After(t) {
+				v = ""
+			}
+		} else {
+			v = ""
+		}
+	}
+
+	// Set the value in the SWIFT storage operation, and remove the tcString from
+	// the form.
+	if v != "" {
+
+		// There is an existing tcString stored by the caller. Use this value
+		// if the network does not currently contain a more recent version.
+		r.Form.Set(fmt.Sprintf("tcString>%s", t.Format("2006-01-02")), v)
+
+	} else {
+
+		// There is no existing tcString available. Therefore retrieve the
+		// newest value contained in the network.
+		r.Form.Set("tcString>", "")
+	}
+
+	// Remove tcString key as this is not valid for a SWIFT operation.
+	r.Form.Del("tcString")
 }
 
 // setSWID gets the value of the SWID from the form associated with the request.

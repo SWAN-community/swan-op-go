@@ -90,6 +90,13 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 					p[v.Key()] = string(b)
 				}
 				break
+			case "tcString":
+				// tcString is unpacked
+				b := unpackOWID(s, v)
+				if b != nil {
+					p[v.Key()] = string(b)
+				}
+				break
 			}
 		}
 
@@ -356,6 +363,15 @@ func convertPairs(
 				return nil, err
 			}
 			w = append(w, s)
+			break
+		case "tcString":
+			if len(v.Values()) > 0 {
+				err = verifyOWIDIfDebug(s, v.Values()[0])
+				if err != nil {
+					return nil, err
+				}
+				w = append(w, copyValue(v))
+			}
 			break
 		default:
 			w = append(w, copyValue(v))
