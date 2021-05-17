@@ -40,7 +40,7 @@ func handlerCreateSWID(s *services) http.HandlerFunc {
 			returnAPIError(&s.config, w, err, http.StatusInternalServerError)
 		}
 
-		// Return the URL as a byte array.
+		// Return the SWID OWID as a byte array.
 		sendResponse(s, w, "application/octet-stream", b)
 	}
 }
