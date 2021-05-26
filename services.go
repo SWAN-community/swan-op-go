@@ -62,7 +62,7 @@ func newServices(settingsFile string, swanAccess Access) *services {
 	// Link to the SWIFT storage.
 	swiftStores = swift.NewStore(swiftConfig)
 
-	swiftStoreManager := swift.NewStorageManager(swiftConfig, swiftStores...)
+	swiftStoreSvc := swift.NewStorageService(swiftConfig, swiftStores...)
 
 	// Link to the OWID storage.
 	owidStore = owid.NewStore(owidConfig)
@@ -79,7 +79,7 @@ func newServices(settingsFile string, swanAccess Access) *services {
 	// Return the services.
 	return &services{
 		c,
-		swift.NewServices(swiftConfig, swiftStoreManager, swanAccess, b),
+		swift.NewServices(swiftConfig, swiftStoreSvc, swanAccess, b),
 		owid.NewServices(owidConfig, owidStore, swanAccess),
 		swanAccess}
 }
