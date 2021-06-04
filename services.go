@@ -42,7 +42,7 @@ type services struct {
 // the configuration parameter, and access to persistent storage via the store
 // parameter.
 func newServices(settingsFile string, swanAccess Access) *services {
-	var swiftStore swift.Store
+	var swiftStores []swift.Store
 	var owidStore owid.Store
 
 	// Use the file provided to get the SWIFT settings.
@@ -60,7 +60,9 @@ func newServices(settingsFile string, swanAccess Access) *services {
 	}
 
 	// Link to the SWIFT storage.
-	swiftStore = swift.NewStore(swiftConfig)
+	swiftStores = swift.NewStore(swiftConfig)
+
+	swiftStoreSvc := swift.NewStorageService(swiftConfig, swiftStores...)
 
 	// Link to the OWID storage.
 	owidStore = owid.NewStore(owidConfig)
@@ -77,7 +79,7 @@ func newServices(settingsFile string, swanAccess Access) *services {
 	// Return the services.
 	return &services{
 		c,
-		swift.NewServices(swiftConfig, swiftStore, swanAccess, b),
+		swift.NewServices(swiftConfig, swiftStoreSvc, swanAccess, b),
 		owid.NewServices(owidConfig, owidStore, swanAccess),
 		swanAccess}
 }
