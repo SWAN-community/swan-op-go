@@ -403,7 +403,7 @@ func getStopped(p *swift.Pair) (*swan.Pair, error) {
 func copyValue(p *swift.Pair) *swan.Pair {
 	return newPairFromSWIFT(
 		p,
-		base64.RawStdEncoding.EncodeToString(p.Values()[0]))
+		base64.StdEncoding.EncodeToString(p.Values()[0]))
 }
 
 // getSID turns the email address that is contained in the Value OWID into
