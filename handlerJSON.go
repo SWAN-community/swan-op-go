@@ -257,7 +257,7 @@ func getOWIDFromSWIFTPair(s *services, p *swift.Pair) *owid.OWID {
 	if len(p.Values()) == 1 && len(p.Values()[0]) > 0 {
 		o, err := owid.FromByteArray(p.Values()[0])
 		if err != nil {
-			if s.config.Debug == true {
+			if s.config.Debug {
 				log.Println(err.Error())
 			}
 		} else {

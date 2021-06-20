@@ -53,6 +53,7 @@ func AddHandlers(
 	http.HandleFunc("/swan/api/v1/decrypt", handlerDecryptAsJSON(s))
 	http.HandleFunc("/swan/api/v1/decrypt-raw", handlerDecryptRawAsJSON(s))
 	http.HandleFunc("/swan/api/v1/create-swid", handlerCreateSWID(s))
+	http.HandleFunc("/health", handlerHealth(s))
 	return nil
 }
 
