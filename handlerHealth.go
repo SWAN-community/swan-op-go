@@ -29,6 +29,10 @@ func handlerHealth(s *services) http.HandlerFunc {
 			returnAPIError(&s.config, w, err, http.StatusInternalServerError)
 			return
 		}
-		w.Write([]byte(fmt.Sprintf("%d", c)))
+		b := []byte(fmt.Sprintf("%d", c))
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(b)))
+		w.Write(b)
 	}
 }
