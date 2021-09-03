@@ -18,8 +18,8 @@ package swanop
 
 import (
 	"fmt"
+	"github.com/SWAN-community/swift-go"
 	"net/http"
-	"swift"
 )
 
 func handlerStop(s *services) http.HandlerFunc {

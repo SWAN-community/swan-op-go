@@ -18,10 +18,10 @@ package swanop
 
 import (
 	"fmt"
+	"github.com/SWAN-community/owid-go"
+	"github.com/SWAN-community/swift-go"
 	"log"
 	"net/http"
-	"owid"
-	"swift"
 	"time"
 )
 

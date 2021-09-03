@@ -19,11 +19,11 @@ package swanop
 import (
 	"compress/gzip"
 	"fmt"
+	"github.com/SWAN-community/owid-go"
+	"github.com/SWAN-community/swift-go"
 	"io/ioutil"
 	"net/http"
-	"owid"
 	"strings"
-	"swift"
 )
 
 // AddHandlers adds swift and owid end points configured from the JSON file

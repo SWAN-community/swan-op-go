@@ -18,8 +18,8 @@ package swanop
 
 import (
 	"fmt"
+	"github.com/SWAN-community/owid-go"
 	"net/http"
-	"owid"
 
 	"github.com/google/uuid"
 )

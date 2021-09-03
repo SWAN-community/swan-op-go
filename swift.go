@@ -17,9 +17,9 @@
 package swanop
 
 import (
+	"github.com/SWAN-community/swift-go"
 	"net/http"
 	"net/url"
-	"swift"
 )
 
 // The methods defined here assume that the internet domain associated with the
