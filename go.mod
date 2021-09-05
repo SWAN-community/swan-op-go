@@ -3,7 +3,7 @@ module github.com/SWAN-community/swan-op-go
 go 1.17
 
 require (
-	github.com/SWAN-community/owid-go v0.1.2
+	github.com/SWAN-community/owid-go v0.1.3
 	github.com/SWAN-community/salt-go v0.1.1
 	github.com/SWAN-community/swan-go v0.1.2
 	github.com/SWAN-community/swift-go v0.1.4
