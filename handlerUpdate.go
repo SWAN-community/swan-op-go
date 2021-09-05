@@ -18,10 +18,12 @@ package swanop
 
 import (
 	"fmt"
-	"github.com/SWAN-community/owid-go"
-	"github.com/SWAN-community/swift-go"
 	"net/http"
 	"net/url"
+	"strings"
+
+	"github.com/SWAN-community/owid-go"
+	"github.com/SWAN-community/swift-go"
 )
 
 // handlerUpdate returns a URL that can be used in the browser primary
@@ -117,17 +119,21 @@ func handlerUpdate(s *services) http.HandlerFunc {
 	}
 }
 
+// validateOWID validates that the OWID is correct if the domain is not
+// localhost. Localhost is always allowed to enable debugging.
 func validateOWID(s *services, q *url.Values, k string) error {
 	o, err := owid.FromForm(q, k)
 	if err != nil {
 		return err
 	}
-	b, err := o.Verify(s.config.Scheme)
-	if err != nil {
-		return err
-	}
-	if b == false {
-		return fmt.Errorf("'%s' not a verified OWID", k)
+	if strings.EqualFold(o.Domain, "localhost") == false {
+		b, err := o.Verify(s.config.Scheme)
+		if err != nil {
+			return err
+		}
+		if b == false {
+			return fmt.Errorf("'%s' not a verified OWID", k)
+		}
 	}
 	return nil
 }
