@@ -17,9 +17,10 @@
 package swanop
 
 import (
-	"github.com/SWAN-community/swift-go"
 	"net/http"
 	"net/url"
+
+	"github.com/SWAN-community/swift-go"
 )
 
 // The methods defined here assume that the internet domain associated with the
@@ -60,5 +61,5 @@ func decryptAndDecode(
 	if err != nil {
 		return nil, err
 	}
-	return n.DecryptAndDecode(d)
+	return n.DecodeAsResults(d)
 }
