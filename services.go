@@ -18,9 +18,11 @@ package swanop
 
 import (
 	"fmt"
+	"net/http"
+
+	"github.com/SWAN-community/access-go"
 	"github.com/SWAN-community/owid-go"
 	"github.com/SWAN-community/swift-go"
-	"net/http"
 )
 
 // HTTP headers that if present indicate a request is probably from a web
@@ -35,13 +37,13 @@ type services struct {
 	config Configuration
 	swift  *swift.Services // Services used by the SWIFT network
 	owid   *owid.Services  // Services used for OWID creation and verification
-	access Access          // Instance of access service
+	access access.Access   // Instance of access service
 }
 
 // newServices a set of services to use with SWAN. These provide defaults via
 // the configuration parameter, and access to persistent storage via the store
 // parameter.
-func newServices(settingsFile string, swanAccess Access) *services {
+func newServices(settingsFile string, swanAccess access.Access) *services {
 	var swiftStores []swift.Store
 	var owidStore owid.Store
 
@@ -54,10 +56,6 @@ func newServices(settingsFile string, swanAccess Access) *services {
 
 	// Use the file provided to get the OWID settings.
 	owidConfig := owid.NewConfig(settingsFile)
-	err = owidConfig.Validate()
-	if err != nil {
-		panic(err)
-	}
 
 	// Link to the SWIFT storage.
 	swiftStores = swift.NewStore(swiftConfig)
@@ -65,7 +63,7 @@ func newServices(settingsFile string, swanAccess Access) *services {
 	swiftStoreSvc := swift.NewStorageService(swiftConfig, swiftStores...)
 
 	// Link to the OWID storage.
-	owidStore = owid.NewStore(owidConfig)
+	owidStore = owid.NewStore(&owidConfig)
 
 	// Get the default browser detector.
 	b, err := swift.NewBrowserRegexes()
@@ -80,7 +78,7 @@ func newServices(settingsFile string, swanAccess Access) *services {
 	return &services{
 		c,
 		swift.NewServices(swiftConfig, swiftStoreSvc, swanAccess, b),
-		owid.NewServices(owidConfig, owidStore, swanAccess),
+		owid.NewServices(&owidConfig, owidStore, swanAccess),
 		swanAccess}
 }
 
@@ -133,22 +131,9 @@ func (s *services) getAccessAllowed(
 	}
 
 	// Validate that the access key provided is valid in the access provider.
-	err = r.ParseForm()
-	if err != nil {
-		returnAPIError(&s.config, w, err, http.StatusInternalServerError)
+	if !s.access.GetAllowedHttp(w, r) {
 		return false
 	}
-	v, err := s.access.GetAllowed(r.FormValue("accessKey"))
-	if v == false || err != nil {
-		returnAPIError(&s.config, w,
-			fmt.Errorf("Access denied. Verify parameter accessKey"),
-			http.StatusNetworkAuthenticationRequired)
-		return false
-	}
-
-	// Remove the access key to ensure it's not available to any further
-	// operations.
-	r.Form.Del("accessKey")
 
 	return true
 }

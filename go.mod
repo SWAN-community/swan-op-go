@@ -1,6 +1,6 @@
 module github.com/SWAN-community/swan-op-go
 
-go 1.17
+go 1.19
 
 require (
 	github.com/SWAN-community/owid-go v0.1.6
@@ -22,6 +22,8 @@ require (
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/logger v0.2.0 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
+	github.com/SWAN-community/access-go v0.0.0-00010101000000-000000000000 // indirect
+	github.com/SWAN-community/common-go v0.1.0 // indirect
 	github.com/SWAN-community/config-go v0.1.4 // indirect
 	github.com/aws/aws-sdk-go v1.35.28 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible // indirect
@@ -30,6 +32,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jstemmer/go-junit-report v0.9.1 // indirect

@@ -18,11 +18,13 @@ package swanop
 
 import (
 	"fmt"
-	"github.com/SWAN-community/owid-go"
-	"github.com/SWAN-community/swift-go"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/SWAN-community/owid-go"
+	"github.com/SWAN-community/swan-go"
+	"github.com/SWAN-community/swift-go"
 )
 
 // handlerFetch returns a URL that can be used in the browser primary navigation
@@ -115,22 +117,23 @@ func setStop(s *services, r *http.Request, t time.Time) {
 // does not contain a value. If it is not valid then an empty value will be
 // used to indicate that the user has not provided any preferences.
 func setPerf(s *services, r *http.Request, t time.Time) {
-	v := r.Form.Get("pref") // The value for the Perf. to use if one not found
-	o, err := owid.FromBase64(v)
+	// The value for the preference to use if one not found
+	v := r.Form.Get("pref")
+	o, err := swan.PreferencesFromBase64(v)
 	if err != nil {
 		logNonCriticalError(s, err)
 		v = ""
 	} else {
 
-		// There is a valid OWID for the Perf. Does it meet the rules?
-		b, err := o.Verify(s.config.Scheme)
+		// There is a valid OWID for the pref. Does it meet the rules?
+		b, err := o.OWID.Verify(s.config.Scheme)
 		if err != nil {
 			logNonCriticalError(s, err)
 			v = ""
 		} else if b {
 
-			// Change the expiry time to be based on the Perf. creation date.
-			t = o.Date.AddDate(0, 0, s.config.DeleteDays)
+			// Change the expiry time to be based on the pref. creation date.
+			t = o.OWID.TimeStamp.AddDate(0, 0, s.config.DeleteDays)
 
 			// If the value has already expired then don't use it. If not then
 			// use it as the value if the network does not currently contain a
@@ -174,21 +177,21 @@ func setPerf(s *services, r *http.Request, t time.Time) {
 // the SWAN network does not contain any other values.
 func setSWID(s *services, r *http.Request, t time.Time) {
 	v := r.Form.Get("swid") // The value for the SWID to use if one not found
-	o, err := owid.FromBase64(v)
+	o, err := swan.IdentifierFromBase64(v)
 	if err != nil {
 		logNonCriticalError(s, err)
 		v = ""
 	} else {
 
 		// There is a valid OWID for the SWID. Does it meet the rules?
-		b, err := o.Verify(s.config.Scheme)
+		b, err := o.OWID.Verify(s.config.Scheme)
 		if err != nil {
 			logNonCriticalError(s, err)
 			v = ""
-		} else if b && isSWAN(s, o) {
+		} else if b && isSWAN(s, o.OWID) {
 
 			// Change the expiry time to be based on the SWID creation date.
-			t = o.Date.AddDate(0, 0, s.config.DeleteDays)
+			t = o.OWID.TimeStamp.AddDate(0, 0, s.config.DeleteDays)
 
 			// If the value has already expired then don't use it. If not then
 			// use it as the value if the network does not currently contain a

@@ -29,18 +29,18 @@ func handlerCreateSWID(s *services) http.HandlerFunc {
 		}
 
 		// Create the SWID OWID for this SWAN Operator.
-		c, err := createSWID(s, r)
-		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusInternalServerError)
+		c := createSWID(s, w, r)
+		if c == nil {
+			return
 		}
 
 		// Get the OWID as a byte array.
-		b, err := c.AsByteArray()
+		b, err := c.MarshalBinary()
 		if err != nil {
 			returnAPIError(&s.config, w, err, http.StatusInternalServerError)
 		}
 
-		// Return the SWID OWID as a byte array.
+		// Return the SWID as a byte array.
 		sendResponse(s, w, "application/octet-stream", b)
 	}
 }

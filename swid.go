@@ -18,32 +18,27 @@ package swanop
 
 import (
 	"fmt"
-	"github.com/SWAN-community/owid-go"
 	"net/http"
+
+	"github.com/SWAN-community/common-go"
+	"github.com/SWAN-community/swan-go"
 
 	"github.com/google/uuid"
 )
 
 // createSWID returns an OWID with a unique new SWID.
-func createSWID(s *services, r *http.Request) (*owid.OWID, error) {
-	c, err := s.owid.GetCreator(r.Host)
+func createSWID(
+	s *services,
+	w http.ResponseWriter,
+	r *http.Request) *swan.Identifier {
+	g := s.owid.GetSignerHttp(w, r)
+	if g == nil {
+		return nil
+	}
+	i, err := swan.NewIdentifier(g, "paf_browser_id", uuid.New())#
 	if err != nil {
-		return nil, err
+		common.ReturnServerError(w, err)
+		return nil
 	}
-	if c == nil {
-		return nil, fmt.Errorf(
-			"No SWID creator available for host '%s'. "+
-				"Try http[s]://%s/owid/register",
-			r.Host,
-			r.Host)
-	}
-	u, err := uuid.New().MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-	o, err := c.CreateOWIDandSign(u)
-	if err != nil {
-		return nil, err
-	}
-	return o, err
+	return i
 }

@@ -19,10 +19,10 @@ package swanop
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/SWAN-community/owid-go"
+	"github.com/SWAN-community/swan-go"
 	"github.com/SWAN-community/swift-go"
 )
 
@@ -54,7 +54,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		// the values. If the SWID is not provided created a new one to use if
 		// a value does not exist already.
 		if r.Form.Get("swid") != "" {
-			err = validateOWID(s, &r.Form, "swid")
+			err = validateSWID(s, r.FormValue("swid"), "swid")
 			if err != nil {
 				returnAPIError(&s.config, w, err, http.StatusBadRequest)
 				return
@@ -64,18 +64,22 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			r.Form.Set(fmt.Sprintf("swid>%s", t), r.Form.Get("swid"))
 			r.Form.Del("swid")
 		} else {
-			swid, err := createSWID(s, r)
-			if err != nil {
-				returnServerError(&s.config, w, err)
+			swid := createSWID(s, w, r)
+			if swid == nil {
 				return
 			}
 
 			// Use the < sign to indicate the oldest, or existing value should
 			// be used.
-			r.Form.Set(fmt.Sprintf("swid<%s", t), swid.AsString())
+			v, err := swid.ToBase64()
+			if err != nil {
+				returnServerError(&s.config, w, err)
+				return
+			}
+			r.Form.Set(fmt.Sprintf("swid<%s", t), v)
 		}
 		if r.Form.Get("pref") != "" {
-			err = validateOWID(s, &r.Form, "pref")
+			err = validatePref(s, r.FormValue("pref"), "pref")
 			if err != nil {
 				returnAPIError(&s.config, w, err, http.StatusBadRequest)
 				return
@@ -84,7 +88,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			r.Form.Del("pref")
 		}
 		if r.Form.Get("email") != "" {
-			err = validateOWID(s, &r.Form, "email")
+			err = validateEmail(s, r.FormValue("email"), "email")
 			if err != nil {
 				returnAPIError(&s.config, w, err, http.StatusBadRequest)
 				return
@@ -93,7 +97,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			r.Form.Del("email")
 		}
 		if r.Form.Get("salt") != "" {
-			err = validateOWID(s, &r.Form, "salt")
+			err = validateSalt(s, r.FormValue("salt"), "salt")
 			if err != nil {
 				returnAPIError(&s.config, w, err, http.StatusBadRequest)
 				return
@@ -121,11 +125,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 
 // validateOWID validates that the OWID is correct if the domain is not
 // localhost. Localhost is always allowed to enable debugging.
-func validateOWID(s *services, q *url.Values, k string) error {
-	o, err := owid.FromForm(q, k)
-	if err != nil {
-		return err
-	}
+func validateOWID(s *services, k string, o *owid.OWID) error {
 	if strings.EqualFold(o.Domain, "localhost") == false {
 		b, err := o.Verify(s.config.Scheme)
 		if err != nil {
@@ -136,4 +136,36 @@ func validateOWID(s *services, q *url.Values, k string) error {
 		}
 	}
 	return nil
+}
+
+func validateSWID(s *services, k string, v string) error {
+	i, err := swan.IdentifierFromBase64(v)
+	if err != nil {
+		return err
+	}
+	return validateOWID(s, k, i.Base.OWID)
+}
+
+func validatePref(s *services, k string, v string) error {
+	p, err := swan.PreferencesFromBase64(v)
+	if err != nil {
+		return err
+	}
+	return validateOWID(s, k, p.OWID)
+}
+
+func validateEmail(s *services, k string, v string) error {
+	e, err := swan.EmailFromBase64(v)
+	if err != nil {
+		return err
+	}
+	return validateOWID(s, k, e.OWID)
+}
+
+func validateSalt(s *services, k string, v string) error {
+	t, err := swan.SaltFromBase64(v)
+	if err != nil {
+		return err
+	}
+	return validateOWID(s, k, t.OWID)
 }

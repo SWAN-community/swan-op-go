@@ -19,11 +19,13 @@ package swanop
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/SWAN-community/owid-go"
-	"github.com/SWAN-community/swift-go"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/SWAN-community/access-go"
+	"github.com/SWAN-community/owid-go"
+	"github.com/SWAN-community/swift-go"
 )
 
 // AddHandlers adds swift and owid end points configured from the JSON file
@@ -33,7 +35,7 @@ import (
 // malformedHandler if SWAN can't handle the request the handler to use instead.
 func AddHandlers(
 	settingsFile string,
-	swanAccess Access,
+	swanAccess access.Access,
 	malformedHandler func(w http.ResponseWriter, r *http.Request)) error {
 
 	// Create the new set of services.
