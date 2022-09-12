@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/SWAN-community/common-go"
 	"github.com/SWAN-community/owid-go"
 	"github.com/SWAN-community/swan-go"
 	"github.com/SWAN-community/swift-go"
@@ -35,7 +36,7 @@ func handlerFetch(s *services) http.HandlerFunc {
 		var err error
 
 		// Check caller is authorized to access SWAN.
-		if s.getAccessAllowed(w, r) == false {
+		if s.access.GetAllowedHttp(w, r) == false {
 			return
 		}
 
@@ -47,7 +48,10 @@ func handlerFetch(s *services) http.HandlerFunc {
 		// Validate and set the return URL.
 		err = swift.SetURL("returnUrl", "returnUrl", &r.Form)
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
+			common.ReturnApplicationError(w, &common.HttpError{
+				Error:   err,
+				Message: "bad return url",
+				Code:    http.StatusBadRequest})
 			return
 		}
 
@@ -60,7 +64,7 @@ func handlerFetch(s *services) http.HandlerFunc {
 		// to determine the URL to direct the browser to.
 		u, err := createStorageOperationURL(s.swift, r, r.Form)
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
+			common.ReturnServerError(w, err)
 			return
 		}
 
@@ -70,20 +74,20 @@ func handlerFetch(s *services) http.HandlerFunc {
 		}
 
 		// Return the response from the SWIFT layer.
-		sendResponse(s, w, "text/plain; charset=utf-8", []byte(u))
+		common.SendString(w, u)
 	}
 }
 
 // setDefaults sets the values for the storage operation in SWIFT if there are
-// no values in the network. SWID, preference OWIDs, and stop identifiers can be
-// provided by the caller for this situation. If no SWID is provided then SWAN
+// no values in the network. RID, preference OWIDs, and stop identifiers can be
+// provided by the caller for this situation. If no RID is provided then SWAN
 // will assign a new random one.
 func setDefaults(s *services, r *http.Request) {
 	t := s.config.DeleteDate()
 	q := &r.Form
 
-	// Process any exist SWID, preference or stop data provided by the caller.
-	setSWID(s, r, t)
+	// Process any exist RID, preference or stop data provided by the caller.
+	setRID(s, r, t)
 	setPerf(s, r, t)
 	setStop(s, r, t)
 
@@ -165,32 +169,32 @@ func setPerf(s *services, r *http.Request, t time.Time) {
 	r.Form.Del("pref")
 }
 
-// setSWID gets the value of the SWID from the form associated with the request.
-// If that SWID is a valid OWID, can be verified with the creators public key,
+// setRID gets the value of the RID from the form associated with the request.
+// If that RID is a valid OWID, can be verified with the creators public key,
 // and is SWAN access node that is known to this access node, and is finally
 // still valid when checked against the delete date, then use this value in
-// cases where the SWID does not exist in the SWAN network. This might be
+// cases where the RID does not exist in the SWAN network. This might be
 // because the SWAN Operators nodes have had cookies removed due to tracking
 // prevention methods, but the value that the caller has is still valid and can
 // be used by the SWAN Operators.
-// If none of the conditions are valid then a new SWID is created and used if
+// If none of the conditions are valid then a new RID is created and used if
 // the SWAN network does not contain any other values.
-func setSWID(s *services, r *http.Request, t time.Time) {
-	v := r.Form.Get("swid") // The value for the SWID to use if one not found
+func setRID(s *services, r *http.Request, t time.Time) {
+	v := r.Form.Get("rid") // The value for the RID to use if one not found
 	o, err := swan.IdentifierFromBase64(v)
 	if err != nil {
 		logNonCriticalError(s, err)
 		v = ""
 	} else {
 
-		// There is a valid OWID for the SWID. Does it meet the rules?
+		// There is a valid OWID for the RID. Does it meet the rules?
 		b, err := o.OWID.Verify(s.config.Scheme)
 		if err != nil {
 			logNonCriticalError(s, err)
 			v = ""
 		} else if b && isSWAN(s, o.OWID) {
 
-			// Change the expiry time to be based on the SWID creation date.
+			// Change the expiry time to be based on the RID creation date.
 			t = o.OWID.TimeStamp.AddDate(0, 0, s.config.DeleteDays)
 
 			// If the value has already expired then don't use it. If not then
@@ -204,23 +208,23 @@ func setSWID(s *services, r *http.Request, t time.Time) {
 		}
 	}
 
-	// Set the value in the SWIFT storage operation, and remove the SWID from
+	// Set the value in the SWIFT storage operation, and remove the RID from
 	// the form.
 	if v != "" {
 
-		// There is an existing SWID stored by the caller. Use this value if the
+		// There is an existing RID stored by the caller. Use this value if the
 		// network does not currently contain a more recent version.
-		r.Form.Set(fmt.Sprintf("swid>%s", t.Format("2006-01-02")), v)
+		r.Form.Set(fmt.Sprintf("rid>%s", t.Format("2006-01-02")), v)
 
 	} else {
 
-		// There is no existing SWID available. Therefore retrieve the newest
+		// There is no existing RID available. Therefore retrieve the newest
 		// value contained in the network.
-		r.Form.Set("swid>", "")
+		r.Form.Set("rid>", "")
 	}
 
-	// Remove swid key as this is not valid for a SWIFT operation.
-	r.Form.Del("swid")
+	// Remove rid key as this is not valid for a SWIFT operation.
+	r.Form.Del("rid")
 }
 
 // isSWAN returns true if the OWID was created from an access node known to this

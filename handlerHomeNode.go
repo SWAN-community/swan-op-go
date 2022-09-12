@@ -18,6 +18,8 @@ package swanop
 
 import (
 	"net/http"
+
+	"github.com/SWAN-community/common-go"
 )
 
 // handlerHomeNode returns the home node as a string.
@@ -26,18 +28,18 @@ func handlerHomeNode(s *services) http.HandlerFunc {
 		var err error
 
 		// Check caller is authorized to access SWAN.
-		if s.getAccessAllowed(w, r) == false {
+		if s.access.GetAllowedHttp(w, r) == false {
 			return
 		}
 
 		// Get the home for the requesting browser.
 		n, err := s.swift.GetHomeNode(r)
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusInternalServerError)
+			common.ReturnServerError(w, err)
 			return
 		}
 
 		// Return the response from the SWIFT layer.
-		sendResponse(s, w, "text/plain; charset=utf-8", []byte(n.Domain()))
+		common.SendString(w, n.Domain())
 	}
 }

@@ -17,11 +17,7 @@
 package swanop
 
 import (
-	"compress/gzip"
-	"fmt"
-	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"github.com/SWAN-community/access-go"
 	"github.com/SWAN-community/owid-go"
@@ -54,83 +50,7 @@ func AddHandlers(
 	http.HandleFunc("/swan/api/v1/home-node", handlerHomeNode(s))
 	http.HandleFunc("/swan/api/v1/decrypt", handlerDecryptAsJSON(s))
 	http.HandleFunc("/swan/api/v1/decrypt-raw", handlerDecryptRawAsJSON(s))
-	http.HandleFunc("/swan/api/v1/create-swid", handlerCreateSWID(s))
+	http.HandleFunc("/swan/api/v1/create-rid", handlerCreateRID(s))
 	http.HandleFunc("/health", handlerHealth(s))
 	return nil
-}
-
-func newResponseError(c *Configuration, r *http.Response) error {
-	in, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	var u string
-	if c.Debug {
-		u = r.Request.URL.String()
-	} else {
-		u = r.Request.Host
-	}
-	return fmt.Errorf("API call '%s' returned '%d' and '%s'",
-		u,
-		r.StatusCode,
-		strings.TrimSpace(string(in)))
-}
-
-func returnAPIError(
-	c *Configuration,
-	w http.ResponseWriter,
-	err error,
-	code int) {
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	http.Error(w, err.Error(), code)
-	if c.Debug {
-		println(err.Error())
-	}
-}
-
-func returnRequestError(
-	c *Configuration,
-	w http.ResponseWriter,
-	err error,
-	code int) {
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	if c.Debug {
-		http.Error(w, err.Error(), code)
-	} else {
-		http.Error(w, "", code)
-	}
-	if c.Debug {
-		println(err.Error())
-	}
-}
-
-func returnServerError(c *Configuration, w http.ResponseWriter, err error) {
-	w.Header().Set("Cache-Control", "no-cache")
-	if c.Debug {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		http.Error(w, "", http.StatusInternalServerError)
-	}
-	if c.Debug {
-		println(err.Error())
-	}
-}
-
-func sendResponse(
-	s *services,
-	w http.ResponseWriter,
-	t string,
-	b []byte) {
-	g := gzip.NewWriter(w)
-	defer g.Close()
-	w.Header().Set("Content-Encoding", "gzip")
-	w.Header().Set("Content-Type", t)
-	w.Header().Set("Cache-Control", "no-cache")
-	_, err := g.Write(b)
-	if err != nil {
-		returnAPIError(&s.config, w, err, http.StatusInternalServerError)
-		return
-	}
 }

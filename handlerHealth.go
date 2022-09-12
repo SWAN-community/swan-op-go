@@ -19,6 +19,8 @@ package swanop
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/SWAN-community/common-go"
 )
 
 // handlerHealth returns the number of alive SWIFT nodes.
@@ -26,13 +28,9 @@ func handlerHealth(s *services) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := s.swift.GetAliveNodesCount()
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusInternalServerError)
+			common.ReturnServerError(w, err)
 			return
 		}
-		b := []byte(fmt.Sprintf("%d", c))
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(b)))
-		w.Write(b)
+		common.SendString(w, fmt.Sprintf("%d", c))
 	}
 }

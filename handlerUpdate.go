@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/SWAN-community/common-go"
 	"github.com/SWAN-community/owid-go"
 	"github.com/SWAN-community/swan-go"
 	"github.com/SWAN-community/swift-go"
@@ -33,7 +34,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Check caller is authorized to access SWAN.
-		if s.getAccessAllowed(w, r) == false {
+		if s.access.GetAllowedHttp(w, r) == false {
 			return
 		}
 
@@ -43,7 +44,10 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		// Validate and set the return URL.
 		err := swift.SetURL("returnUrl", "returnUrl", &r.Form)
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
+			common.ReturnApplicationError(w, &common.HttpError{
+				Error:   err,
+				Message: "bad return url",
+				Code:    http.StatusBadRequest})
 			return
 		}
 
@@ -51,37 +55,43 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		t := s.config.DeleteDate().Format("2006-01-02")
 
 		// Validate that the SWAN values provided are valid OWIDs and then set
-		// the values. If the SWID is not provided created a new one to use if
+		// the values. If the RID is not provided created a new one to use if
 		// a value does not exist already.
-		if r.Form.Get("swid") != "" {
-			err = validateSWID(s, r.FormValue("swid"), "swid")
+		if r.Form.Get("rid") != "" {
+			err = validateRID(s, r.FormValue("rid"), "rid")
 			if err != nil {
-				returnAPIError(&s.config, w, err, http.StatusBadRequest)
+				common.ReturnApplicationError(w, &common.HttpError{
+					Error:   err,
+					Message: "bad rid",
+					Code:    http.StatusBadRequest})
 				return
 			}
 
 			// Use the > sign to indicate the newest value should be used.
-			r.Form.Set(fmt.Sprintf("swid>%s", t), r.Form.Get("swid"))
-			r.Form.Del("swid")
+			r.Form.Set(fmt.Sprintf("rid>%s", t), r.Form.Get("rid"))
+			r.Form.Del("rid")
 		} else {
-			swid := createSWID(s, w, r)
-			if swid == nil {
+			rid := createRID(s, w, r)
+			if rid == nil {
 				return
 			}
 
 			// Use the < sign to indicate the oldest, or existing value should
 			// be used.
-			v, err := swid.ToBase64()
+			v, err := rid.ToBase64()
 			if err != nil {
-				returnServerError(&s.config, w, err)
+				common.ReturnServerError(w, err)
 				return
 			}
-			r.Form.Set(fmt.Sprintf("swid<%s", t), v)
+			r.Form.Set(fmt.Sprintf("rid<%s", t), v)
 		}
 		if r.Form.Get("pref") != "" {
 			err = validatePref(s, r.FormValue("pref"), "pref")
 			if err != nil {
-				returnAPIError(&s.config, w, err, http.StatusBadRequest)
+				common.ReturnApplicationError(w, &common.HttpError{
+					Error:   err,
+					Message: "bad pref",
+					Code:    http.StatusBadRequest})
 				return
 			}
 			r.Form.Set(fmt.Sprintf("pref>%s", t), r.Form.Get("pref"))
@@ -90,7 +100,10 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		if r.Form.Get("email") != "" {
 			err = validateEmail(s, r.FormValue("email"), "email")
 			if err != nil {
-				returnAPIError(&s.config, w, err, http.StatusBadRequest)
+				common.ReturnApplicationError(w, &common.HttpError{
+					Error:   err,
+					Message: "bad email",
+					Code:    http.StatusBadRequest})
 				return
 			}
 			r.Form.Set(fmt.Sprintf("email>%s", t), r.Form.Get("email"))
@@ -99,7 +112,10 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		if r.Form.Get("salt") != "" {
 			err = validateSalt(s, r.FormValue("salt"), "salt")
 			if err != nil {
-				returnAPIError(&s.config, w, err, http.StatusBadRequest)
+				common.ReturnApplicationError(w, &common.HttpError{
+					Error:   err,
+					Message: "bad salt",
+					Code:    http.StatusBadRequest})
 				return
 			}
 			r.Form.Set(fmt.Sprintf("salt>%s", t), r.Form.Get("salt"))
@@ -114,12 +130,12 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		// to determine the URL to direct the browser to.
 		u, err := createStorageOperationURL(s.swift, r, r.Form)
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
+			common.ReturnServerError(w, err)
 			return
 		}
 
 		// Return the URL from the SWIFT layer.
-		sendResponse(s, w, "text/plain; charset=utf-8", []byte(u))
+		common.SendString(w, u)
 	}
 }
 
@@ -138,7 +154,7 @@ func validateOWID(s *services, k string, o *owid.OWID) error {
 	return nil
 }
 
-func validateSWID(s *services, k string, v string) error {
+func validateRID(s *services, k string, v string) error {
 	i, err := swan.IdentifierFromBase64(v)
 	if err != nil {
 		return err

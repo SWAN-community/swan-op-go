@@ -18,25 +18,25 @@ package swanop
 
 import (
 	"fmt"
-	"github.com/SWAN-community/swift-go"
 	"net/http"
+
+	"github.com/SWAN-community/common-go"
+	"github.com/SWAN-community/swift-go"
 )
 
 func handlerStop(s *services) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Check caller is authorized to access SWAN.
-		if s.getAccessAllowed(w, r) == false {
+		if s.access.GetAllowedHttp(w, r) == false {
 			return
 		}
 
 		// Validate the host parameter is present.
 		if r.Form.Get("host") == "" {
-			returnAPIError(
-				&s.config,
-				w,
-				fmt.Errorf("'host' must be provided"),
-				http.StatusBadRequest)
+			common.ReturnApplicationError(w, &common.HttpError{
+				Message: "'host' must be provided",
+				Code:    http.StatusBadRequest})
 			return
 		}
 
@@ -46,7 +46,10 @@ func handlerStop(s *services) http.HandlerFunc {
 		// Validate the set the return URL.
 		err := swift.SetURL("returnUrl", "returnUrl", &r.Form)
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
+			common.ReturnApplicationError(w, &common.HttpError{
+				Error:   err,
+				Message: "bad return url",
+				Code:    http.StatusBadRequest})
 			return
 		}
 
@@ -62,11 +65,11 @@ func handlerStop(s *services) http.HandlerFunc {
 		// to determine the URL to direct the browser to.
 		u, err := createStorageOperationURL(s.swift, r, r.Form)
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
+			common.ReturnServerError(w, err)
 			return
 		}
 
 		// Return the URL as a text string.
-		sendResponse(s, w, "text/plain; charset=utf-8", []byte(u))
+		common.SendString(w, u)
 	}
 }

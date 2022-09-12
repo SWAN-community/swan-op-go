@@ -17,11 +17,9 @@
 package swanop
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -58,8 +56,8 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 		// Unpack or copy the SWIFT key value pairs to the map.
 		for _, v := range o.Pairs() {
 			switch v.Key() {
-			case "swid":
-				// SWID does not get the OWID removed. It's is copied.
+			case "rid":
+				// RID does not get the OWID removed. It's is copied.
 				i, err := pairToIdentifier(v)
 				if err != nil {
 					common.ReturnServerError(w, err)
@@ -94,8 +92,8 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 					common.ReturnServerError(w, err)
 					return
 				}
-				if s != nil && len(s.Salt) > 0 {
-					p[v.Key()] = string(s.Salt)
+				if s != nil {
+					p[v.Key()] = fmt.Sprintf("%d", s.Salt)
 				} else {
 					p[v.Key()] = ""
 				}
@@ -114,20 +112,16 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 			}
 		}
 
-		// If there is no valid SWID create a new one.
-		if p["swid"] == nil {
+		// If there is no valid RID create a new one.
+		if p["rid"] == nil {
 			var err error
-			o := createSWID(s, w, r)
+			o := createRID(s, w, r)
 			if o == nil {
 				return
 			}
-			p["swid"], err = o.ToBase64()
+			p["rid"], err = o.ToBase64()
 			if err != nil {
-				returnAPIError(
-					&s.config,
-					w,
-					err,
-					http.StatusInternalServerError)
+				common.ReturnServerError(w, err)
 				return
 			}
 		}
@@ -143,12 +137,12 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 		// Turn the map of Raw SWAN data into a JSON string.
 		j, err := json.Marshal(p)
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusInternalServerError)
+			common.ReturnServerError(w, err)
 			return
 		}
 
 		// Send the JSON string.
-		sendGzipJSON(s, w, r, j)
+		common.SendJS(w, j)
 	}
 }
 
@@ -171,19 +165,19 @@ func handlerDecryptAsJSON(s *services) http.HandlerFunc {
 		// byte arrays to a single string.
 		v, err := convertPairs(s, r, o.Map())
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusBadRequest)
+			common.ReturnServerError(w, err)
 			return
 		}
 
 		// Turn the SWAN Pairs into a JSON string.
 		j, err := json.Marshal(v)
 		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusInternalServerError)
+			common.ReturnServerError(w, err)
 			return
 		}
 
 		// Send the JSON string.
-		sendGzipJSON(s, w, r, j)
+		common.SendJS(w, j)
 	}
 }
 
@@ -194,7 +188,7 @@ func getResults(
 	r *http.Request) *swift.Results {
 
 	// Check caller can access.
-	if s.getAccessAllowed(w, r) == false {
+	if s.access.GetAllowedHttp(w, r) == false {
 		return nil
 	}
 
@@ -206,11 +200,9 @@ func getResults(
 
 	// Validate that the timestamp has not expired.
 	if o.IsTimeStampValid() == false {
-		returnAPIError(
-			&s.config,
-			w,
-			fmt.Errorf("data expired and can no longer be used"),
-			http.StatusBadRequest)
+		common.ReturnApplicationError(w, &common.HttpError{
+			Message: "data expired and can no longer be used",
+			Code:    http.StatusBadRequest})
 		return nil
 	}
 
@@ -228,42 +220,29 @@ func getSWIFTResults(
 	// Validate that the encrypted parameter is present.
 	v := r.Form.Get("encrypted")
 	if v == "" {
-		returnAPIError(
-			&s.config,
-			w,
-			fmt.Errorf("Missing 'encrypted' parameter"),
-			http.StatusBadRequest)
+		common.ReturnApplicationError(w, &common.HttpError{
+			Message: "missing 'encrypted' parameter",
+			Code:    http.StatusBadRequest})
 		return nil
 	}
 
 	// Decode the query string to form the byte array.
 	d, err := base64.RawURLEncoding.DecodeString(v)
 	if err != nil {
-		returnAPIError(&s.config, w, err, http.StatusBadRequest)
+		common.ReturnApplicationError(w, &common.HttpError{
+			Message: "not url encoded base64 string",
+			Code:    http.StatusBadRequest})
 		return nil
 	}
 
 	// Decrypt the string with the access node.
 	o, err := decryptAndDecode(s.swift, r.Host, d)
 	if err != nil {
-		returnAPIError(&s.config, w, err, http.StatusBadRequest)
+		common.ReturnServerError(w, err)
 		return nil
 	}
 
 	return o
-}
-
-// sendGzipJSON responds with the JSON payload provided. If debug is enabled
-// then the response is set to the logger.
-func sendGzipJSON(
-	s *services,
-	w http.ResponseWriter,
-	r *http.Request,
-	j []byte) {
-	if s.config.Debug {
-		log.Println(string(j))
-	}
-	sendResponse(s, w, "application/json", j)
 }
 
 // verifyOWID confirms that the OWID provided has a valid signature.
@@ -295,7 +274,6 @@ func convertPairs(
 	s *services,
 	r *http.Request,
 	p map[string]*swift.Pair) ([]*swan.Pair, error) {
-	var err error
 	var m time.Time
 	w := make([]*swan.Pair, 0, len(p)+1)
 
@@ -330,39 +308,41 @@ func convertPairs(
 				}
 				w = append(w, s)
 			}
-			break
 		case "salt":
 			// Don't do anything with salt as we have used it when
 			// creating the SID.
-			break
 		case "pref":
 			if len(v.Values()) > 0 {
-				err = verifyOWIDIfDebug(s, v.Values()[0])
+				f, err := pairToPreferences(v)
+				if err != nil {
+					return nil, err
+				}
+				err = verifyOWIDIfDebug(s, f.OWID)
 				if err != nil {
 					return nil, err
 				}
 				w = append(w, copyValue(v))
 			}
-			break
-		case "swid":
+		case "rid":
 			if len(v.Values()) > 0 {
-				err = verifyOWIDIfDebug(s, v.Values()[0])
+				i, err := pairToIdentifier(v)
+				if err != nil {
+					return nil, err
+				}
+				err = verifyOWIDIfDebug(s, i.OWID)
 				if err != nil {
 					return nil, err
 				}
 				w = append(w, copyValue(v))
 			}
-			break
 		case "stop":
 			s, err := getStopped(v)
 			if err != nil {
 				return nil, err
 			}
 			w = append(w, s)
-			break
 		default:
 			w = append(w, copyValue(v))
-			break
 		}
 	}
 
@@ -424,7 +404,11 @@ func getSID(
 		Value:   ""}
 	if email != nil &&
 		salt != nil {
-		sid, err := createSID(email, salt)
+		g, err := s.owid.GetSigner(r.Host)
+		if err != nil {
+			return nil, err
+		}
+		sid, err := swan.NewSID(g, email, salt)
 		if err != nil {
 			return nil, err
 		}
@@ -435,30 +419,6 @@ func getSID(
 	}
 	return v, nil
 }
-
-// func createOWID(s *services, r *http.Request, v []byte) (*owid.OWID, error) {
-
-// 	// Get the creator associated with this SWAN domain.
-// 	c, err := s.owid.GetSigner(r.Host)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if c == nil {
-// 		return nil, fmt.Errorf(
-// 			"No creator for '%s'. Use http[s]://%s/owid/register to setup "+
-// 				"domain.",
-// 			r.Host,
-// 			r.Host)
-// 	}
-
-// 	// Create and sign the OWID.
-// 	o, err := c.CreateOWIDandSign(v)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return o, nil
-// }
 
 func pairToEmail(pair *swift.Pair) (*swan.Email, error) {
 	var e swan.Email
@@ -506,19 +466,6 @@ func pairToSalt(pair *swift.Pair) (*swan.Salt, error) {
 		return nil, err
 	}
 	return &s, nil
-}
-
-// Create the SID by hashing the salt and the email to create a sha256 hash.
-// If the email address is empty or the salt is empty then an empty byte array
-// is returned.
-func createSID(email *swan.Email, salt *swan.Salt) (*swan.ByteArray, error) {
-	if len(email.Email) == 0 || len(salt.Salt) == 0 {
-		return swan.NewByteArray([]byte{})
-	}
-	hasher := sha256.New()
-	hasher.Write(append([]byte(email.Email), salt.Salt...))
-	b := hasher.Sum(nil)
-	return swan.NewByteArray(b)
 }
 
 // newPairFromSWIFT creates a new SWAN pair from the SWIFT pair setting the

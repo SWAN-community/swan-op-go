@@ -18,29 +18,26 @@ package swanop
 
 import (
 	"net/http"
+
+	"github.com/SWAN-community/common-go"
+	"github.com/SWAN-community/swan-go"
+
+	"github.com/google/uuid"
 )
 
-func handlerCreateSWID(s *services) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		// Check caller is authorized to access SWAN.
-		if s.getAccessAllowed(w, r) == false {
-			return
-		}
-
-		// Create the SWID OWID for this SWAN Operator.
-		c := createSWID(s, w, r)
-		if c == nil {
-			return
-		}
-
-		// Get the OWID as a byte array.
-		b, err := c.MarshalBinary()
-		if err != nil {
-			returnAPIError(&s.config, w, err, http.StatusInternalServerError)
-		}
-
-		// Return the SWID as a byte array.
-		sendResponse(s, w, "application/octet-stream", b)
+// createRID returns an OWID with a unique new RID.
+func createRID(
+	s *services,
+	w http.ResponseWriter,
+	r *http.Request) *swan.Identifier {
+	g := s.owid.GetSignerHttp(w, r)
+	if g == nil {
+		return nil
 	}
+	i, err := swan.NewIdentifier(g, "paf_browser_id", uuid.New())
+	if err != nil {
+		common.ReturnServerError(w, err)
+		return nil
+	}
+	return i
 }

@@ -17,9 +17,6 @@
 package swanop
 
 import (
-	"fmt"
-	"net/http"
-
 	"github.com/SWAN-community/access-go"
 	"github.com/SWAN-community/owid-go"
 	"github.com/SWAN-community/swift-go"
@@ -80,60 +77,4 @@ func newServices(settingsFile string, swanAccess access.Access) *services {
 		swift.NewServices(swiftConfig, swiftStoreSvc, swanAccess, b),
 		owid.NewServices(&owidConfig, owidStore, swanAccess),
 		swanAccess}
-}
-
-// Returns true if the request is allowed to access the handler, otherwise
-// false. Removes the accessKey parameter from the form to prevent it being
-// used by other methods.  If false is returned then no further action is
-// needed as the method will have responded to the request already.
-func (s *services) getAccessAllowed(
-	w http.ResponseWriter,
-	r *http.Request) bool {
-
-	// Check that there are no HTTP headers that are usually sent by browsers.
-	// SWAN can only be used from server side environments to ensure that the
-	// accessKey does not become publicly available.
-	// Ignore this check if Debug is enabled.
-	if s.config.Debug == false {
-		for _, h := range invalidHTTPHeaders {
-			if r.Header.Get(h) != "" {
-				returnAPIError(&s.config, w,
-					fmt.Errorf(
-						"'%s' header must not be present in SWAN API "+
-							"requests as this indicates that the request is "+
-							"coming from a web browser and therefore the "+
-							"access key might be compromised if this "+
-							"configuration where to be made publicly available",
-						h),
-					http.StatusNetworkAuthenticationRequired)
-				return false
-			}
-		}
-	}
-
-	// Check that the domain for this request relates to a valid access node.
-	a, err := s.swift.GetAccessNodeForHost(r.Host)
-	if err != nil {
-		returnAPIError(
-			&s.config,
-			w,
-			err,
-			http.StatusBadRequest)
-		return false
-	}
-	if a == nil {
-		returnAPIError(
-			&s.config,
-			w,
-			fmt.Errorf("'%s' not a valid SWAN access node", r.Host),
-			http.StatusBadRequest)
-		return false
-	}
-
-	// Validate that the access key provided is valid in the access provider.
-	if !s.access.GetAllowedHttp(w, r) {
-		return false
-	}
-
-	return true
 }
