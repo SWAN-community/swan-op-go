@@ -24,7 +24,7 @@ import (
 	"github.com/SWAN-community/swift-go"
 )
 
-// AddHandlers adds swift and owid end points configured from the JSON file
+// AddHandlers adds SWIFT and OWID end points configured from the settings file
 // provided.
 // settingsFile path to the file that contains the configuration settings.
 // swanAccess an authorization instance used to valid requests.

@@ -36,7 +36,7 @@ func handlerFetch(s *services) http.HandlerFunc {
 		var err error
 
 		// Check caller is authorized to access SWAN.
-		if s.access.GetAllowedHttp(w, r) == false {
+		if !s.getAllowedHttp(w, r) {
 			return
 		}
 
@@ -123,7 +123,7 @@ func setStop(s *services, r *http.Request, t time.Time) {
 func setPerf(s *services, r *http.Request, t time.Time) {
 	// The value for the preference to use if one not found
 	v := r.Form.Get("pref")
-	o, err := swan.PreferencesFromBase64(v)
+	o, err := swan.PreferencesUnmarshalBase64([]byte(v))
 	if err != nil {
 		logNonCriticalError(s, err)
 		v = ""
@@ -181,7 +181,7 @@ func setPerf(s *services, r *http.Request, t time.Time) {
 // the SWAN network does not contain any other values.
 func setRID(s *services, r *http.Request, t time.Time) {
 	v := r.Form.Get("rid") // The value for the RID to use if one not found
-	o, err := swan.IdentifierFromBase64(v)
+	o, err := swan.IdentifierUnmarshalBase64([]byte(v))
 	if err != nil {
 		logNonCriticalError(s, err)
 		v = ""

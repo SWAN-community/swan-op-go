@@ -34,7 +34,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Check caller is authorized to access SWAN.
-		if s.access.GetAllowedHttp(w, r) == false {
+		if !s.getAllowedHttp(w, r) {
 			return
 		}
 
@@ -78,12 +78,12 @@ func handlerUpdate(s *services) http.HandlerFunc {
 
 			// Use the < sign to indicate the oldest, or existing value should
 			// be used.
-			v, err := rid.ToBase64()
+			v, err := rid.MarshalBase64()
 			if err != nil {
 				common.ReturnServerError(w, err)
 				return
 			}
-			r.Form.Set(fmt.Sprintf("rid<%s", t), v)
+			r.Form.Set(fmt.Sprintf("rid<%s", t), string(v))
 		}
 		if r.Form.Get("pref") != "" {
 			err = validatePref(s, r.FormValue("pref"), "pref")
@@ -142,12 +142,12 @@ func handlerUpdate(s *services) http.HandlerFunc {
 // validateOWID validates that the OWID is correct if the domain is not
 // localhost. Localhost is always allowed to enable debugging.
 func validateOWID(s *services, k string, o *owid.OWID) error {
-	if strings.EqualFold(o.Domain, "localhost") == false {
+	if !strings.EqualFold(o.Domain, "localhost") {
 		b, err := o.Verify(s.config.Scheme)
 		if err != nil {
 			return err
 		}
-		if b == false {
+		if !b {
 			return fmt.Errorf("'%s' not a verified OWID", k)
 		}
 	}
@@ -155,7 +155,7 @@ func validateOWID(s *services, k string, o *owid.OWID) error {
 }
 
 func validateRID(s *services, k string, v string) error {
-	i, err := swan.IdentifierFromBase64(v)
+	i, err := swan.IdentifierUnmarshalBase64([]byte(v))
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func validateRID(s *services, k string, v string) error {
 }
 
 func validatePref(s *services, k string, v string) error {
-	p, err := swan.PreferencesFromBase64(v)
+	p, err := swan.PreferencesUnmarshalBase64([]byte(v))
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func validatePref(s *services, k string, v string) error {
 }
 
 func validateEmail(s *services, k string, v string) error {
-	e, err := swan.EmailFromBase64(v)
+	e, err := swan.EmailUnmarshalBase64([]byte(v))
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func validateEmail(s *services, k string, v string) error {
 }
 
 func validateSalt(s *services, k string, v string) error {
-	t, err := swan.SaltFromBase64(v)
+	t, err := swan.SaltUnmarshalBase64([]byte(v))
 	if err != nil {
 		return err
 	}

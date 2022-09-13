@@ -28,7 +28,7 @@ func handlerHomeNode(s *services) http.HandlerFunc {
 		var err error
 
 		// Check caller is authorized to access SWAN.
-		if s.access.GetAllowedHttp(w, r) == false {
+		if !s.getAllowedHttp(w, r) {
 			return
 		}
 

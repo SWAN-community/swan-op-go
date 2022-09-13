@@ -17,21 +17,20 @@
 package swanop
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"time"
+
+	"github.com/SWAN-community/config-go"
 )
 
 // Configuration maps to the appsettings.json settings file.
 type Configuration struct {
-	Scheme string `json:"scheme"` // The scheme to use for requests
-	Debug  bool   `json:"debug"`
+	config.Base `mapstructure:",squash"`
 	// Seconds until the value provided should be revalidated
-	RevalidateSeconds int `json:"revalidateSeconds"`
+	RevalidateSeconds int `mapstructure:"revalidateSeconds"`
 	// The number of days after which the data will automatically be removed
 	// from SWAN and will need to be provided again by the user.
-	DeleteDays int `json:"deleteDays"`
+	DeleteDays int `mapstructure:"deleteDays"`
 }
 
 // RevalidateSecondsDuration in seconds as a time.Duration
@@ -39,20 +38,20 @@ func (c *Configuration) RevalidateSecondsDuration() time.Duration {
 	return time.Duration(c.RevalidateSeconds) * time.Second
 }
 
-// NewConfig creates a new instance of configuration from the file provided.
+// newConfig a new instance of configuration from the file provided.
 func newConfig(file string) Configuration {
 	var c Configuration
-	configFile, err := os.Open(file)
+	err := config.LoadConfig([]string{"."}, file, &c)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	defer configFile.Close()
-	jsonParser := json.NewDecoder(configFile)
-	jsonParser.Decode(&c)
 
 	// Set defaults if they're not provided in the settings.
 	if c.DeleteDays == 0 {
 		c.DeleteDays = 90
+	}
+	if c.RevalidateSeconds == 0 {
+		c.RevalidateSeconds = int(time.Hour.Seconds())
 	}
 	return c
 }

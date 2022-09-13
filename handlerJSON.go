@@ -64,13 +64,12 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 					return
 				}
 				if i != nil {
-					p[v.Key()], err = i.ToBase64()
+					p[v.Key()], err = i.MarshalBase64()
 					if err != nil {
 						common.ReturnServerError(w, err)
 						return
 					}
 				}
-				break
 			case "email":
 				// Email is unpacked so that the original value can be
 				// displayed.
@@ -82,7 +81,6 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 				if e != nil {
 					p[v.Key()] = e.Email
 				}
-				break
 			case "salt":
 				// Salt is unpacked so that the email can be hashed. The payload
 				// of the OWID is the salt as a base 64 string originally
@@ -108,7 +106,6 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 				if f != nil {
 					p[v.Key()] = f.Data.UseBrowsingForPersonalization
 				}
-				break
 			}
 		}
 
@@ -119,7 +116,7 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 			if o == nil {
 				return
 			}
-			p["rid"], err = o.ToBase64()
+			p["rid"], err = o.MarshalBase64()
 			if err != nil {
 				common.ReturnServerError(w, err)
 				return
@@ -188,7 +185,7 @@ func getResults(
 	r *http.Request) *swift.Results {
 
 	// Check caller can access.
-	if s.access.GetAllowedHttp(w, r) == false {
+	if !s.getAllowedHttp(w, r) {
 		return nil
 	}
 
@@ -199,7 +196,7 @@ func getResults(
 	}
 
 	// Validate that the timestamp has not expired.
-	if o.IsTimeStampValid() == false {
+	if !o.IsTimeStampValid() {
 		common.ReturnApplicationError(w, &common.HttpError{
 			Message: "data expired and can no longer be used",
 			Code:    http.StatusBadRequest})
@@ -251,17 +248,8 @@ func verifyOWID(s *services, o *owid.OWID) error {
 	if err != nil {
 		return err
 	}
-	if b == false {
+	if !b {
 		return fmt.Errorf("OWID failed verification")
-	}
-	return nil
-}
-
-// verifyOWIDIfDebug confirms that the OWID byte array provided has a valid
-// signature only if debug mode is enabled.
-func verifyOWIDIfDebug(s *services, o *owid.OWID) error {
-	if s.config.Debug {
-		return verifyOWID(s, o)
 	}
 	return nil
 }
@@ -288,18 +276,22 @@ func convertPairs(
 				if err != nil {
 					return nil, err
 				}
-				err = verifyOWIDIfDebug(s, e.OWID)
-				if err != nil {
-					return nil, err
+				if s.config.Debug {
+					err = verifyOWID(s, e.OWID)
+					if err != nil {
+						return nil, err
+					}
 				}
 				// Verify salt
 				t, err := pairToSalt(n)
 				if err != nil {
 					return nil, err
 				}
-				err = verifyOWIDIfDebug(s, t.OWID)
-				if err != nil {
-					return nil, err
+				if s.config.Debug {
+					err = verifyOWID(s, t.OWID)
+					if err != nil {
+						return nil, err
+					}
 				}
 				// Get the SID from the email and the salt
 				s, err := getSID(s, r, v, e, t)
@@ -313,25 +305,29 @@ func convertPairs(
 			// creating the SID.
 		case "pref":
 			if len(v.Values()) > 0 {
-				f, err := pairToPreferences(v)
-				if err != nil {
-					return nil, err
-				}
-				err = verifyOWIDIfDebug(s, f.OWID)
-				if err != nil {
-					return nil, err
+				if s.config.Debug {
+					f, err := pairToPreferences(v)
+					if err != nil {
+						return nil, err
+					}
+					err = verifyOWID(s, f.OWID)
+					if err != nil {
+						return nil, err
+					}
 				}
 				w = append(w, copyValue(v))
 			}
 		case "rid":
 			if len(v.Values()) > 0 {
-				i, err := pairToIdentifier(v)
-				if err != nil {
-					return nil, err
-				}
-				err = verifyOWIDIfDebug(s, i.OWID)
-				if err != nil {
-					return nil, err
+				if s.config.Debug {
+					i, err := pairToIdentifier(v)
+					if err != nil {
+						return nil, err
+					}
+					err = verifyOWID(s, i.OWID)
+					if err != nil {
+						return nil, err
+					}
 				}
 				w = append(w, copyValue(v))
 			}
@@ -357,7 +353,7 @@ func convertPairs(
 	// Add a final pair to indicate when the caller should revalidate the
 	// SWAN data with the network. This is recommended for the caller, but not
 	// compulsory.
-	t := time.Now().UTC()
+	t := time.Now()
 	e := t.Add(s.config.RevalidateSecondsDuration()).Format(
 		ValidationTimeFormat)
 	w = append(w, &swan.Pair{
@@ -378,15 +374,20 @@ func getStopped(p *swift.Pair) (*swan.Pair, error) {
 			s = append(s, string(v))
 		}
 	}
-	return newPairFromSWIFT(p, strings.Join(s, listSeparator)), nil
+	return &swan.Pair{
+		Key:     p.Key(),
+		Created: p.Created(),
+		Expires: p.Expires(),
+		Value:   strings.Join(s, listSeparator)}, nil
 }
 
-// copyValue turns the SWIFT pair into a SWAN pair taking the first value and
-// base 64 encoding it as a string.
+// copyValue turns the SWIFT key and SWAN value into a SWAN pair.
 func copyValue(p *swift.Pair) *swan.Pair {
-	return newPairFromSWIFT(
-		p,
-		base64.StdEncoding.EncodeToString(p.Values()[0]))
+	return &swan.Pair{
+		Key:     p.Key(),
+		Created: p.Created(),
+		Expires: p.Expires(),
+		Value:   p.Value()}
 }
 
 // getSID turns the email address that is contained in the Value OWID into
@@ -400,22 +401,22 @@ func getSID(
 	v := &swan.Pair{
 		Key:     "sid",
 		Created: emailPair.Created(),
-		Expires: emailPair.Expires(),
-		Value:   ""}
+		Expires: emailPair.Expires()}
 	if email != nil &&
 		salt != nil {
 		g, err := s.owid.GetSigner(r.Host)
 		if err != nil {
 			return nil, err
 		}
-		sid, err := swan.NewSID(g, email, salt)
+		d, err := swan.NewSID(g, email, salt)
 		if err != nil {
 			return nil, err
 		}
-		v.Value, err = sid.ToBase64()
+		b, err := d.MarshalBase64()
 		if err != nil {
 			return nil, err
 		}
+		v.Value = string(b)
 	}
 	return v, nil
 }
@@ -466,14 +467,4 @@ func pairToSalt(pair *swift.Pair) (*swan.Salt, error) {
 		return nil, err
 	}
 	return &s, nil
-}
-
-// newPairFromSWIFT creates a new SWAN pair from the SWIFT pair setting the
-// value to the string provided.
-func newPairFromSWIFT(s *swift.Pair, v string) *swan.Pair {
-	return &swan.Pair{
-		Key:     s.Key(),
-		Created: s.Created(),
-		Expires: s.Expires(),
-		Value:   v}
 }

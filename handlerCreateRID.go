@@ -26,17 +26,17 @@ func handlerCreateRID(s *services) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Check caller is authorized to access SWAN.
-		if s.access.GetAllowedHttp(w, r) == false {
+		if !s.getAllowedHttp(w, r) {
 			return
 		}
 
-		// Create the RID OWID for this SWAN Operator.
+		// Create the RID for this SWAN Operator.
 		c := createRID(s, w, r)
 		if c == nil {
 			return
 		}
 
-		// Get the OWID as a byte array.
+		// Get the RID as a byte array.
 		b, err := c.MarshalBinary()
 		if err != nil {
 			common.ReturnServerError(w, err)

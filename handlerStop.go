@@ -28,7 +28,7 @@ func handlerStop(s *services) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Check caller is authorized to access SWAN.
-		if s.access.GetAllowedHttp(w, r) == false {
+		if !s.getAllowedHttp(w, r) {
 			return
 		}
 
