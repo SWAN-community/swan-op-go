@@ -17,7 +17,11 @@
 package swanop
 
 import (
+	"fmt"
+	"net/http"
+
 	"github.com/SWAN-community/access-go"
+	"github.com/SWAN-community/common-go"
 	"github.com/SWAN-community/owid-go"
 	"github.com/SWAN-community/swift-go"
 )
@@ -29,7 +33,7 @@ var invalidHTTPHeaders = []string{
 	"Accept-Language",
 	"Cookie"}
 
-// Services references all the information needed for every method.
+// services references all the information needed for every method.
 type services struct {
 	config Configuration
 	swift  *swift.Services // Services used by the SWIFT network
@@ -77,4 +81,31 @@ func newServices(settingsFile string, swanAccess access.Access) *services {
 		swift.NewServices(swiftConfig, swiftStoreSvc, swanAccess, b),
 		owid.NewServices(&owidConfig, owidStore, swanAccess),
 		swanAccess}
+}
+
+func (s *services) getAllowedHttp(w http.ResponseWriter, r *http.Request) bool {
+
+	// Check that there are no HTTP headers that are usually sent by browsers.
+	// SWAN can only be used from server side environments to ensure that the
+	// accessKey does not become publicly available.
+	// Ignore this check if Debug is enabled.
+	if !s.config.Debug {
+		for _, h := range invalidHTTPHeaders {
+			if r.Header.Get(h) != "" {
+				common.ReturnApplicationError(w, &common.HttpError{
+					Message: fmt.Sprintf(
+						"'%s' header must not be present in SWAN API "+
+							"requests as this indicates that the request is "+
+							"coming from a web browser and therefore the "+
+							"access key might be compromised if this "+
+							"configuration where to be made publicly available",
+						h),
+					Code: http.StatusNetworkAuthenticationRequired})
+				return false
+			}
+		}
+	}
+
+	// Now check the access key.
+	return s.access.GetAllowedHttp(w, r)
 }
