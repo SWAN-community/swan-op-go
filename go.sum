@@ -85,6 +85,8 @@ github.com/SWAN-community/swan-go v0.1.10-0.20220914202242-d9d571c3621e h1:GRii/
 github.com/SWAN-community/swan-go v0.1.10-0.20220914202242-d9d571c3621e/go.mod h1:jKIX0WWxFp8r4ihtTNXFNrBQiLozSVWoxhORYtTXgmw=
 github.com/SWAN-community/swan-go v0.1.10-0.20220915124650-a4857b5a453a h1:GMnAvALepi8lwTh/til0A3D0dUCAp3Co25B3wXxm7GM=
 github.com/SWAN-community/swan-go v0.1.10-0.20220915124650-a4857b5a453a/go.mod h1:jKIX0WWxFp8r4ihtTNXFNrBQiLozSVWoxhORYtTXgmw=
+github.com/SWAN-community/swan-go v0.1.10-0.20220915130003-b6a0a99020de h1:PBsc3imu1gQUjYQ3Vita0RVlvwKJhClPnmWVYg0jUDc=
+github.com/SWAN-community/swan-go v0.1.10-0.20220915130003-b6a0a99020de/go.mod h1:jKIX0WWxFp8r4ihtTNXFNrBQiLozSVWoxhORYtTXgmw=
 github.com/SWAN-community/swift-go v0.1.7-0.20220913145444-454bd5937fb0 h1:C+ayWUabV1DlDSfrsezcJcHch9QA0v648WphItufLvU=
 github.com/SWAN-community/swift-go v0.1.7-0.20220913145444-454bd5937fb0/go.mod h1:JegQy8xXrQmWTJbHgozllVig7l/7wq3AXhwnSAUDPeA=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
