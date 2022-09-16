@@ -7,7 +7,7 @@ require (
 	github.com/SWAN-community/common-go v0.1.3
 	github.com/SWAN-community/config-go v0.1.5
 	github.com/SWAN-community/owid-go v0.1.9-0.20220916151727-6625b31e1bda
-	github.com/SWAN-community/swan-go v0.1.10-0.20220916205117-b81302975e93
+	github.com/SWAN-community/swan-go v0.1.10-0.20220916211527-0bac7396b14f
 	github.com/SWAN-community/swift-go v0.1.7-0.20220916140926-924d23437419
 	github.com/google/uuid v1.3.0
 )
