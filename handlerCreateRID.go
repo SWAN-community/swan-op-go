@@ -33,15 +33,12 @@ func handlerCreateRID(s *services) http.HandlerFunc {
 		}
 
 		// Create the RID for this SWAN Operator.
-		i := &Identifier{}
-		c, err := createRID(s, r)
+		i, err := createRID(s, r)
 		if err != nil {
 			common.ReturnServerError(w, fmt.Errorf("create rid: %w", err))
 			return
 		}
-		i.Identifier = *c
-		i.Created = c.OWID.TimeStamp
-		i.Expires = s.config.DeleteDate()
+		i.GetCookie().Expires = s.config.DeleteDate()
 
 		// Turn the model into a JSON string.
 		j, err := json.Marshal(i)

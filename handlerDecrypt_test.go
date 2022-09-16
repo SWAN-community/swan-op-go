@@ -33,26 +33,22 @@ func TestDecrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := &Request{}
-	email, err := swan.NewEmail(g, testEmail)
+	m.Email, err = swan.NewEmail(g, testEmail)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Email = &Email{Email: *email}
-	rid, err := swan.NewIdentifier(g, "paf_browser_id", uuid.New())
+	m.RID, err = swan.NewIdentifier(g, "paf_browser_id", uuid.New())
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.RID = &Identifier{Identifier: *rid}
-	salt, err := swan.NewSaltFromString(g, testSalt)
+	m.Salt, err = swan.NewSaltFromString(g, testSalt)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Salt = &Salt{Salt: *salt}
-	pref, err := swan.NewPreferences(g, false)
+	m.Pref, err = swan.NewPreferences(g, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Pref = &Preferences{Preferences: *pref}
 	u := getTestUpdateURL(t, s, g, m)
 	rr := common.HTTPTest(
 		t,

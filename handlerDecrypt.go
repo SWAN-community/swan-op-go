@@ -45,7 +45,7 @@ func handlerDecryptRawAsJSON(s *services) http.HandlerFunc {
 		}
 
 		// Set the validity for the response now that the final data is present.
-		err := m.SetValidity(s)
+		err := m.SetValidity(s.config.DeleteDays)
 		if err != nil {
 			common.ReturnServerError(w, err)
 			return
@@ -84,7 +84,7 @@ func handlerDecryptAsJSON(s *services) http.HandlerFunc {
 		m.Salt = nil
 
 		// Set the validity for the response now that the final data is present.
-		err := m.SetValidity(s)
+		err := m.SetValidity(s.config.DeleteDays)
 		if err != nil {
 			common.ReturnServerError(w, err)
 			return
@@ -115,7 +115,7 @@ func createResponseModel(
 
 	// Turn the SWIFT results into a SWAN Operator model.
 	m := &Response{}
-	err := m.UnmarshalSwift(o)
+	err := m.UnmarshalSwift(o, s, r)
 	if err != nil {
 		common.ReturnServerError(w, err)
 		return nil

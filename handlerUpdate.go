@@ -38,7 +38,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 
 		// Turn the incoming request into a model.
 		m := &Request{}
-		err := m.UnmarshalRequest(r)
+		err := m.ModelRequest.UnmarshalRequest(r)
 		if err != nil {
 			common.ReturnApplicationError(w, &common.HttpError{
 				Message: "bad data structure",
@@ -49,7 +49,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 
 		// Valid that the data in the model is correct if not in debug mode.
 		if !s.config.Debug {
-			err = m.Verify(s)
+			err = m.Verify(s.config.Scheme)
 			if err != nil {
 				common.ReturnApplicationError(w, &common.HttpError{
 					Message: "invalid data",

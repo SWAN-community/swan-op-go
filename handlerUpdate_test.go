@@ -36,15 +36,18 @@ func TestUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := &Request{}
-	email, err := swan.NewEmail(g, testEmail)
+	m.Email, err = swan.NewEmail(g, testEmail)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Email = &Email{Email: *email}
 	getTestUpdateURL(t, s, g, m)
 }
 
-func getTestUpdateURL(t *testing.T, s *services, g *owid.Signer, m *Request) *url.URL {
+func getTestUpdateURL(
+	t *testing.T,
+	s *services,
+	g *owid.Signer,
+	m *Request) *url.URL {
 	b, err := json.Marshal(m)
 	if err != nil {
 		t.Fatal(err)
