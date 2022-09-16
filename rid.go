@@ -17,27 +17,26 @@
 package swanop
 
 import (
+	"fmt"
 	"net/http"
 
-	"github.com/SWAN-community/common-go"
 	"github.com/SWAN-community/swan-go"
 
 	"github.com/google/uuid"
 )
 
-// createRID returns an OWID with a unique new RID.
-func createRID(
-	s *services,
-	w http.ResponseWriter,
-	r *http.Request) *swan.Identifier {
-	g := s.owid.GetSignerHttp(w, r)
+// createRID returns a swan.Identifier with a new unique RID.
+func createRID(s *services, r *http.Request) (*swan.Identifier, error) {
+	g, err := s.owid.GetSigner(r.Host)
+	if err != nil {
+		return nil, err
+	}
 	if g == nil {
-		return nil
+		return nil, fmt.Errorf("host '%s' unknown signer", r.Host)
 	}
 	i, err := swan.NewIdentifier(g, "paf_browser_id", uuid.New())
 	if err != nil {
-		common.ReturnServerError(w, err)
-		return nil
+		return nil, err
 	}
-	return i
+	return i, nil
 }

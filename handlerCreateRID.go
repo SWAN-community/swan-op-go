@@ -17,6 +17,8 @@
 package swanop
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/SWAN-community/common-go"
@@ -31,18 +33,24 @@ func handlerCreateRID(s *services) http.HandlerFunc {
 		}
 
 		// Create the RID for this SWAN Operator.
-		c := createRID(s, w, r)
-		if c == nil {
+		i := &Identifier{}
+		c, err := createRID(s, r)
+		if err != nil {
+			common.ReturnServerError(w, fmt.Errorf("create rid: %w", err))
+			return
+		}
+		i.Identifier = *c
+		i.Created = c.OWID.TimeStamp
+		i.Expires = s.config.DeleteDate()
+
+		// Turn the model into a JSON string.
+		j, err := json.Marshal(i)
+		if err != nil {
+			common.ReturnServerError(w, err)
 			return
 		}
 
-		// Get the RID as a byte array.
-		b, err := c.MarshalBinary()
-		if err != nil {
-			common.ReturnServerError(w, err)
-		}
-
-		// Return the RID as a byte array.
-		common.SendByteArray(w, b)
+		// Send the JSON string.
+		common.SendJS(w, j)
 	}
 }

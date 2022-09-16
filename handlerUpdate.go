@@ -19,11 +19,9 @@ package swanop
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/SWAN-community/common-go"
 	"github.com/SWAN-community/owid-go"
-	"github.com/SWAN-community/swan-go"
 	"github.com/SWAN-community/swift-go"
 )
 
@@ -38,11 +36,33 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			return
 		}
 
+		// Turn the incoming request into a model.
+		m := &Request{}
+		err := m.UnmarshalRequest(r)
+		if err != nil {
+			common.ReturnApplicationError(w, &common.HttpError{
+				Message: "bad data structure",
+				Error:   err,
+				Code:    http.StatusBadRequest})
+			return
+		}
+
+		// Valid that the data in the model is correct if not in debug mode.
+		if !s.config.Debug {
+			err = m.Verify(s)
+			if err != nil {
+				common.ReturnApplicationError(w, &common.HttpError{
+					Message: "invalid data",
+					Error:   err,
+					Code:    http.StatusBadRequest})
+			}
+		}
+
 		// As this is an update operation do not use the home node alone.
 		r.Form.Set("useHomeNode", "false")
 
 		// Validate and set the return URL.
-		err := swift.SetURL("returnUrl", "returnUrl", &r.Form)
+		err = swift.SetURL("returnUrl", "returnUrl", &r.Form)
 		if err != nil {
 			common.ReturnApplicationError(w, &common.HttpError{
 				Error:   err,
@@ -51,79 +71,75 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			return
 		}
 
-		// Get the time when the data should be deleted.
-		t := s.config.DeleteDate().Format("2006-01-02")
-
 		// Validate that the SWAN values provided are valid OWIDs and then set
 		// the values. If the RID is not provided created a new one to use if
 		// a value does not exist already.
-		if r.Form.Get("rid") != "" {
-			err = validateRID(s, r.FormValue("rid"), "rid")
-			if err != nil {
-				common.ReturnApplicationError(w, &common.HttpError{
-					Error:   err,
-					Message: "bad rid",
-					Code:    http.StatusBadRequest})
-				return
-			}
-
+		if m.RID != nil {
 			// Use the > sign to indicate the newest value should be used.
-			r.Form.Set(fmt.Sprintf("rid>%s", t), r.Form.Get("rid"))
-			r.Form.Del("rid")
-		} else {
-			rid := createRID(s, w, r)
-			if rid == nil {
-				return
-			}
-
-			// Use the < sign to indicate the oldest, or existing value should
-			// be used.
-			v, err := rid.MarshalBase64()
+			b, err := m.RID.MarshalBase64()
 			if err != nil {
 				common.ReturnServerError(w, err)
 				return
 			}
-			r.Form.Set(fmt.Sprintf("rid<%s", t), string(v))
-		}
-		if r.Form.Get("pref") != "" {
-			err = validatePref(s, r.FormValue("pref"), "pref")
+			r.Form.Set(fmt.Sprintf("rid>%s",
+				getExpire(s, m.RID.GetOWID())),
+				string(b))
+		} else {
+			rid, err := createRID(s, r)
 			if err != nil {
-				common.ReturnApplicationError(w, &common.HttpError{
-					Error:   err,
-					Message: "bad pref",
-					Code:    http.StatusBadRequest})
+				common.ReturnServerError(w, err)
+			}
+
+			// Use the < sign to indicate the oldest, or existing value should
+			// be used.
+			b, err := rid.MarshalBase64()
+			if err != nil {
+				common.ReturnServerError(w, err)
 				return
 			}
-			r.Form.Set(fmt.Sprintf("pref>%s", t), r.Form.Get("pref"))
-			r.Form.Del("pref")
+			r.Form.Set(fmt.Sprintf("rid<%s",
+				getExpire(s, rid.GetOWID())),
+				string(b))
 		}
-		if r.Form.Get("email") != "" {
-			err = validateEmail(s, r.FormValue("email"), "email")
+		if m.Pref != nil {
+			// Use the > sign to indicate the newest value should be used.
+			b, err := m.Pref.MarshalBase64()
 			if err != nil {
-				common.ReturnApplicationError(w, &common.HttpError{
-					Error:   err,
-					Message: "bad email",
-					Code:    http.StatusBadRequest})
+				common.ReturnServerError(w, err)
 				return
 			}
-			r.Form.Set(fmt.Sprintf("email>%s", t), r.Form.Get("email"))
-			r.Form.Del("email")
+			r.Form.Set(fmt.Sprintf("pref>%s",
+				getExpire(s, m.Pref.GetOWID())),
+				string(b))
 		}
-		if r.Form.Get("salt") != "" {
-			err = validateSalt(s, r.FormValue("salt"), "salt")
+		if m.Email != nil {
+			// Use the > sign to indicate the newest value should be used.
+			b, err := m.Email.MarshalBase64()
 			if err != nil {
-				common.ReturnApplicationError(w, &common.HttpError{
-					Error:   err,
-					Message: "bad salt",
-					Code:    http.StatusBadRequest})
+				common.ReturnServerError(w, err)
 				return
 			}
-			r.Form.Set(fmt.Sprintf("salt>%s", t), r.Form.Get("salt"))
-			r.Form.Del("salt")
+			r.Form.Set(fmt.Sprintf("email>%s",
+				getExpire(s, m.Email.GetOWID())),
+				string(b))
 		}
-		if r.Form.Get("stop") != "" {
-			r.Form.Set(fmt.Sprintf("stop+%s", t), r.Form.Get("stop"))
-			r.Form.Del("stop")
+		if m.Salt != nil {
+			// Use the > sign to indicate the newest value should be used.
+			b, err := m.Salt.MarshalBase64()
+			if err != nil {
+				common.ReturnServerError(w, err)
+				return
+			}
+			r.Form.Set(fmt.Sprintf("salt>%s",
+				getExpire(s, m.Salt.GetOWID())),
+				string(b))
+		}
+		if m.Stop != nil {
+			// Use the + sign to indicate duplicate values should be merged.
+			t := s.config.DeleteDate().Format("2006-01-02")
+			for _, v := range m.Stop.Value {
+				r.Form.Add(fmt.Sprintf("stop+%s", t), v)
+			}
 		}
 
 		// Uses the SWIFT access node associated with this internet domain
@@ -139,49 +155,6 @@ func handlerUpdate(s *services) http.HandlerFunc {
 	}
 }
 
-// validateOWID validates that the OWID is correct if the domain is not
-// localhost. Localhost is always allowed to enable debugging.
-func validateOWID(s *services, k string, o *owid.OWID) error {
-	if !strings.EqualFold(o.Domain, "localhost") {
-		b, err := o.Verify(s.config.Scheme)
-		if err != nil {
-			return err
-		}
-		if !b {
-			return fmt.Errorf("'%s' not a verified OWID", k)
-		}
-	}
-	return nil
-}
-
-func validateRID(s *services, k string, v string) error {
-	i, err := swan.IdentifierUnmarshalBase64([]byte(v))
-	if err != nil {
-		return err
-	}
-	return validateOWID(s, k, i.Base.OWID)
-}
-
-func validatePref(s *services, k string, v string) error {
-	p, err := swan.PreferencesUnmarshalBase64([]byte(v))
-	if err != nil {
-		return err
-	}
-	return validateOWID(s, k, p.OWID)
-}
-
-func validateEmail(s *services, k string, v string) error {
-	e, err := swan.EmailUnmarshalBase64([]byte(v))
-	if err != nil {
-		return err
-	}
-	return validateOWID(s, k, e.OWID)
-}
-
-func validateSalt(s *services, k string, v string) error {
-	t, err := swan.SaltUnmarshalBase64([]byte(v))
-	if err != nil {
-		return err
-	}
-	return validateOWID(s, k, t.OWID)
+func getExpire(s *services, o *owid.OWID) string {
+	return o.GetExpires(s.config.DeleteDays).Format("2006-01-02")
 }

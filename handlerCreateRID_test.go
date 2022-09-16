@@ -17,6 +17,8 @@
 package swanop
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -27,20 +29,25 @@ import (
 
 func TestCreateRID(t *testing.T) {
 	s := getServices(t)
-	values := url.Values{}
-	values.Set("accessKey", testAccessKey)
+	u, err := url.Parse(fmt.Sprintf(
+		"%s://%s/test?accessKey=%s",
+		s.config.Scheme,
+		testDomain,
+		testAccessKey))
+	if err != nil {
+		t.Fatal(err)
+	}
 	rr := common.HTTPTest(
 		t,
-		"GET",
-		testDomain,
-		"/swan/api/v1/create-rid",
-		values,
+		http.MethodGet,
+		u,
+		nil,
 		handlerCreateRID(s))
 	if rr.Code != http.StatusOK {
 		t.Fatal("status not ok")
 	}
 	i := &swan.Identifier{}
-	err := i.UnmarshalBinary(common.ResponseAsByteArrayTest(t, rr))
+	err = json.Unmarshal(common.ResponseAsByteArrayTest(t, rr), i)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +55,7 @@ func TestCreateRID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v, err := g.Verify(i.OWID)
+	v, err := g.Verify(i.GetOWID())
 	if err != nil {
 		t.Fatal(err)
 	}

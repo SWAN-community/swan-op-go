@@ -17,44 +17,61 @@
 package swanop
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
 
 	"github.com/SWAN-community/common-go"
+	"github.com/SWAN-community/owid-go"
+	"github.com/SWAN-community/swan-go"
 )
 
-// TestFetch confirms that a URL is returned. It does not test that the URL can
-// be used with a SWIFT node to retrieve encrypted data.
-func TestFetch(t *testing.T) {
-	getTestFetchURL(t, getServices(t))
+func TestUpdate(t *testing.T) {
+	s := getServices(t)
+	g, err := s.owid.GetSigner(testDomain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := &Request{}
+	email, err := swan.NewEmail(g, testEmail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Email = &Email{Email: *email}
+	getTestUpdateURL(t, s, g, m)
 }
 
-func getTestFetchURL(t *testing.T, s *services) *url.URL {
+func getTestUpdateURL(t *testing.T, s *services, g *owid.Signer, m *Request) *url.URL {
+	b, err := json.Marshal(m)
+	if err != nil {
+		t.Fatal(err)
+	}
 	u, err := url.Parse(fmt.Sprintf(
-		"%s://%s/swan/api/v1/fetch",
+		"%s://%s/swan/api/v1/update",
 		s.config.Scheme,
 		testDomain))
 	if err != nil {
 		t.Fatal(err)
 	}
-	q := url.Values{}
+	q := &url.Values{}
 	q.Set("accessKey", testAccessKey)
 	q.Set("returnUrl", s.config.Scheme+"://"+testDomain)
 	u.RawQuery = q.Encode()
 	rr := common.HTTPTest(
 		t,
-		http.MethodGet,
+		http.MethodPost,
 		u,
-		nil,
-		handlerFetch(s))
+		bytes.NewReader(b),
+		handlerUpdate(s))
 	if rr.Code != http.StatusOK {
 		t.Fatal("status not ok")
 	}
-	i, err := url.ParseRequestURI(common.ResponseAsStringTest(t, rr))
+	r, err := url.ParseRequestURI(common.ResponseAsStringTest(t, rr))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return i
+	return r
 }

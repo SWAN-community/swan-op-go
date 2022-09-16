@@ -17,44 +17,55 @@
 package swanop
 
 import (
-	"fmt"
 	"net/http"
-	"net/url"
 	"testing"
 
 	"github.com/SWAN-community/common-go"
+	"github.com/SWAN-community/swan-go"
+	"github.com/SWAN-community/swift-go"
+	"github.com/google/uuid"
 )
 
-// TestFetch confirms that a URL is returned. It does not test that the URL can
-// be used with a SWIFT node to retrieve encrypted data.
-func TestFetch(t *testing.T) {
-	getTestFetchURL(t, getServices(t))
-}
-
-func getTestFetchURL(t *testing.T, s *services) *url.URL {
-	u, err := url.Parse(fmt.Sprintf(
-		"%s://%s/swan/api/v1/fetch",
-		s.config.Scheme,
-		testDomain))
+func TestDecrypt(t *testing.T) {
+	s := getServices(t)
+	g, err := s.owid.GetSigner(testDomain)
 	if err != nil {
 		t.Fatal(err)
 	}
-	q := url.Values{}
-	q.Set("accessKey", testAccessKey)
-	q.Set("returnUrl", s.config.Scheme+"://"+testDomain)
-	u.RawQuery = q.Encode()
+	m := &Request{}
+	email, err := swan.NewEmail(g, testEmail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Email = &Email{Email: *email}
+	rid, err := swan.NewIdentifier(g, "paf_browser_id", uuid.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.RID = &Identifier{Identifier: *rid}
+	salt, err := swan.NewSaltFromString(g, testSalt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Salt = &Salt{Salt: *salt}
+	pref, err := swan.NewPreferences(g, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Pref = &Preferences{Preferences: *pref}
+	u := getTestUpdateURL(t, s, g, m)
 	rr := common.HTTPTest(
 		t,
 		http.MethodGet,
 		u,
 		nil,
-		handlerFetch(s))
+		swift.HandlerStore(s.swift,
+			func(w http.ResponseWriter, r *http.Request) {
+				t.Fatal("malformed")
+			}))
 	if rr.Code != http.StatusOK {
 		t.Fatal("status not ok")
 	}
-	i, err := url.ParseRequestURI(common.ResponseAsStringTest(t, rr))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return i
+	r := common.ResponseAsStringTest(t, rr)
+	t.Log(r)
 }
