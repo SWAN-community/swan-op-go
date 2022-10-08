@@ -83,6 +83,8 @@ github.com/SWAN-community/owid-go v0.1.9-0.20220916140737-d44ee83dceeb h1:sYXDaK
 github.com/SWAN-community/owid-go v0.1.9-0.20220916140737-d44ee83dceeb/go.mod h1:W9RX+DenWvSopXclvJdesUynUUgn5efIk9NwpHdgwXs=
 github.com/SWAN-community/owid-go v0.1.9-0.20220916151727-6625b31e1bda h1:MGmktS/RXSCSBhmFqZACuczEE2faObb781XGztCEMOo=
 github.com/SWAN-community/owid-go v0.1.9-0.20220916151727-6625b31e1bda/go.mod h1:W9RX+DenWvSopXclvJdesUynUUgn5efIk9NwpHdgwXs=
+github.com/SWAN-community/owid-go v0.1.9-0.20221008124206-ba23081e7840 h1:t6ZJWO3RQWl2MwQa8Gk+9LlPrFTUJeAQgk41WbhTo+c=
+github.com/SWAN-community/owid-go v0.1.9-0.20221008124206-ba23081e7840/go.mod h1:W9RX+DenWvSopXclvJdesUynUUgn5efIk9NwpHdgwXs=
 github.com/SWAN-community/swan-go v0.1.10-0.20220914083751-92dfa2bad93a h1:L6qtuNn1SGEYN4cH+8t7L7qDpFFUmTDD+v+Yd0HyOIc=
 github.com/SWAN-community/swan-go v0.1.10-0.20220914083751-92dfa2bad93a/go.mod h1:NfiCl3Ximg6MjhqipURj1KKMC8SlPMFcu+Sg8rpZcM4=
 github.com/SWAN-community/swan-go v0.1.10-0.20220914103432-d25adeaf617f h1:Y0gQpEQmCkgzXus2jNR1MJAiZNZsXLsLsLM2z821eiY=
@@ -125,6 +127,8 @@ github.com/SWAN-community/swan-go v0.1.10-0.20221008092554-2a72ac7b597c h1:NpuLj
 github.com/SWAN-community/swan-go v0.1.10-0.20221008092554-2a72ac7b597c/go.mod h1:QZ68FQ6QUYMQgmTclGeHV8luPB4eWs9MmonwhujH7aA=
 github.com/SWAN-community/swan-go v0.1.10-0.20221008101331-f35abb6e15d2 h1:LKBe4Nf7RKnKQuDOwcIHzupqeoaBSFS2dZeuSCV8Sgo=
 github.com/SWAN-community/swan-go v0.1.10-0.20221008101331-f35abb6e15d2/go.mod h1:QZ68FQ6QUYMQgmTclGeHV8luPB4eWs9MmonwhujH7aA=
+github.com/SWAN-community/swan-go v0.1.10-0.20221008124345-472f712d7480 h1:OBHvRY09AgDnCAouHYgs2q/lMconJVLFQtbQmlyMzws=
+github.com/SWAN-community/swan-go v0.1.10-0.20221008124345-472f712d7480/go.mod h1:rw4z9DPumMZUx3kqwIaYPQwqN/erDVKpCXOLfbHhHMs=
 github.com/SWAN-community/swift-go v0.1.7-0.20220913145444-454bd5937fb0 h1:C+ayWUabV1DlDSfrsezcJcHch9QA0v648WphItufLvU=
 github.com/SWAN-community/swift-go v0.1.7-0.20220913145444-454bd5937fb0/go.mod h1:JegQy8xXrQmWTJbHgozllVig7l/7wq3AXhwnSAUDPeA=
 github.com/SWAN-community/swift-go v0.1.7-0.20220916103545-6e0a03b5ad4e h1:G0RznDUAUEtTHLfzwSuDR8IQp3DHpioR5Q9gOlBipn0=
