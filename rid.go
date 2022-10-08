@@ -34,7 +34,7 @@ func createRID(s *services, r *http.Request) (*swan.Identifier, error) {
 	if g == nil {
 		return nil, fmt.Errorf("host '%s' unknown signer", r.Host)
 	}
-	i, err := swan.NewIdentifier(g, "paf_browser_id", uuid.New())
+	i, err := swan.NewIdentifier(g, "rid", uuid.New())
 	if err != nil {
 		return nil, err
 	}
