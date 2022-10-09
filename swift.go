@@ -27,8 +27,8 @@ import (
 // SWAN Operator has also been registered as a SWIFT access node in the SWIFT
 // services. If this is not the case then an error is returned.
 
-// createStorageOperationURL returns a URL to redirect the web browser to that
-// will perform the storage operation requested.
+// createStorageOperationURL returns a URL to redirect the web browser to
+// perform the storage operation requested.
 // s instance of the SWIFT services that are mapped to this SWAN Operator
 // r the current HTTP request from the web browser
 // q key value pairs to include in the query, updated by the method
