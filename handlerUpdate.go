@@ -43,11 +43,9 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			return
 		}
 
-		// Valid that the data in the model is correct if not in debug mode.
-		if !s.config.Debug {
-			if !m.Verify(w, s.config.Scheme) {
-				return
-			}
+		// Valid that the data in the model is correct.
+		if !m.Verify(w, s.config.Scheme) {
+			return
 		}
 
 		// As this is an update operation do not use the home node alone.
