@@ -43,8 +43,10 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			return
 		}
 
-		// Valid that the data in the model is correct.
-		if !m.Verify(w, s.config.Scheme) {
+		// Valid that the data in the model is correct if not in debug mode.
+		// This check needs to be by passed for tests where the relevant OWID
+		// signers are not available via HTTP.
+		if !s.config.Debug && !m.Verify(w, s.config.Scheme) {
 			return
 		}
 
