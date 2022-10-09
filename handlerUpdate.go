@@ -66,7 +66,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		// Validate that the SWAN values provided are valid OWIDs and then set
 		// the values. If the RID is not provided created a new one to use if
 		// a value does not exist already.
-		if m.RID != nil && m.RID.OWID != nil {
+		if m.RID != nil && m.RID.IsSigned() {
 			// Use the > sign to indicate the newest value should be used.
 			b, err := m.RID.MarshalBase64()
 			if err != nil {
@@ -94,7 +94,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 				getExpire(s, rid.GetOWID())),
 				string(b))
 		}
-		if m.Pref != nil && m.Pref.OWID != nil {
+		if m.Pref != nil && m.Pref.IsSigned() {
 			// Use the > sign to indicate the newest value should be used.
 			b, err := m.Pref.MarshalBase64()
 			if err != nil {
@@ -105,7 +105,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 				getExpire(s, m.Pref.GetOWID())),
 				string(b))
 		}
-		if m.Email != nil && m.Email.OWID != nil {
+		if m.Email != nil && m.Email.IsSigned() {
 			// Use the > sign to indicate the newest value should be used.
 			b, err := m.Email.MarshalBase64()
 			if err != nil {
@@ -116,7 +116,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 				getExpire(s, m.Email.GetOWID())),
 				string(b))
 		}
-		if m.Salt != nil && m.Salt.OWID != nil {
+		if m.Salt != nil && m.Salt.IsSigned() {
 			// Use the > sign to indicate the newest value should be used.
 			b, err := m.Salt.MarshalBase64()
 			if err != nil {
