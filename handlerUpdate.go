@@ -22,6 +22,7 @@ import (
 
 	"github.com/SWAN-community/common-go"
 	"github.com/SWAN-community/owid-go"
+	"github.com/SWAN-community/swan-go"
 	"github.com/SWAN-community/swift-go"
 )
 
@@ -37,24 +38,15 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		}
 
 		// Turn the incoming request into a model.
-		m := &Request{}
-		err := m.ModelRequest.UnmarshalRequest(r)
-		if err != nil {
-			common.ReturnApplicationError(w, &common.HttpError{
-				Message: "bad data structure",
-				Error:   err,
-				Code:    http.StatusBadRequest})
+		m := swan.ModelRequestFromHttpRequest(r, w)
+		if m == nil {
 			return
 		}
 
 		// Valid that the data in the model is correct if not in debug mode.
 		if !s.config.Debug {
-			err = m.Verify(s.config.Scheme)
-			if err != nil {
-				common.ReturnApplicationError(w, &common.HttpError{
-					Message: "invalid data",
-					Error:   err,
-					Code:    http.StatusBadRequest})
+			if !m.Verify(w, s.config.Scheme) {
+				return
 			}
 		}
 
@@ -62,7 +54,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		r.Form.Set("useHomeNode", "false")
 
 		// Validate and set the return URL.
-		err = swift.SetURL("returnUrl", "returnUrl", &r.Form)
+		err := swift.SetURL("returnUrl", "returnUrl", &r.Form)
 		if err != nil {
 			common.ReturnApplicationError(w, &common.HttpError{
 				Error:   err,
@@ -74,7 +66,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 		// Validate that the SWAN values provided are valid OWIDs and then set
 		// the values. If the RID is not provided created a new one to use if
 		// a value does not exist already.
-		if m.RID != nil {
+		if m.RID != nil && m.RID.OWID != nil {
 			// Use the > sign to indicate the newest value should be used.
 			b, err := m.RID.MarshalBase64()
 			if err != nil {
@@ -91,7 +83,8 @@ func handlerUpdate(s *services) http.HandlerFunc {
 			}
 
 			// Use the < sign to indicate the oldest, or existing value should
-			// be used.
+			// be used. This new one should be used only if others don't already
+			// exist.
 			b, err := rid.MarshalBase64()
 			if err != nil {
 				common.ReturnServerError(w, err)
@@ -101,7 +94,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 				getExpire(s, rid.GetOWID())),
 				string(b))
 		}
-		if m.Pref != nil {
+		if m.Pref != nil && m.Pref.OWID != nil {
 			// Use the > sign to indicate the newest value should be used.
 			b, err := m.Pref.MarshalBase64()
 			if err != nil {
@@ -112,7 +105,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 				getExpire(s, m.Pref.GetOWID())),
 				string(b))
 		}
-		if m.Email != nil {
+		if m.Email != nil && m.Email.OWID != nil {
 			// Use the > sign to indicate the newest value should be used.
 			b, err := m.Email.MarshalBase64()
 			if err != nil {
@@ -123,7 +116,7 @@ func handlerUpdate(s *services) http.HandlerFunc {
 				getExpire(s, m.Email.GetOWID())),
 				string(b))
 		}
-		if m.Salt != nil {
+		if m.Salt != nil && m.Salt.OWID != nil {
 			// Use the > sign to indicate the newest value should be used.
 			b, err := m.Salt.MarshalBase64()
 			if err != nil {
