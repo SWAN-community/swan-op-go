@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/SWAN-community/owid-go"
 	"github.com/SWAN-community/swan-go"
 	"github.com/SWAN-community/swift-go"
 )
@@ -63,14 +64,17 @@ func (m *Response) newRID(s *services, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	m.RID.Cookie.Expires = m.RID.GetOWID().TimeStamp.Add(
-		time.Duration(s.config.DeleteDays) * time.Hour * 24)
+	m.RID.GetCookie().Expires = getExpires(s, m.RID.GetOWID())
 	return nil
 }
 
-// setSID uses the Email and Salt to populate the SID data.
+// setSID uses the Email and Salt to populate the SID data if they are present
+// and contain valid data.
 func (m *Response) setSID(s *services, r *http.Request) error {
-	if m.Email.Email != "" && m.Salt.Salt != nil {
+	if m.Email != nil &&
+		m.Email.Email != "" &&
+		m.Salt != nil &&
+		len(m.Salt.Salt) > 0 {
 		g, err := s.owid.GetSigner(r.Host)
 		if err != nil {
 			return err
@@ -79,8 +83,13 @@ func (m *Response) setSID(s *services, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		m.SID.GetCookie().Expires = m.SID.GetOWID().TimeStamp.Add(
-			time.Duration(s.config.DeleteDays) * time.Hour * 24)
+		m.SID.GetCookie().Expires = getExpires(s, m.SID.GetOWID())
 	}
 	return nil
+}
+
+// getExpires returns the expiry date for the OWID. Used with the cookie to
+// tell the browser when it should be removed.
+func getExpires(s *services, o *owid.OWID) time.Time {
+	return o.TimeStamp.Add(time.Duration(s.config.DeleteDays) * time.Hour * 24)
 }

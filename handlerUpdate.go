@@ -148,6 +148,9 @@ func handlerUpdate(s *services) http.HandlerFunc {
 	}
 }
 
+// getExpire returns a string representation of the date when the value will
+// be removed from SWIFT. The OWID's created date is added to the operator's
+// delete days value.
 func getExpire(s *services, o *owid.OWID) string {
 	return o.GetExpires(s.config.DeleteDays).Format("2006-01-02")
 }

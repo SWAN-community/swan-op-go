@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/SWAN-community/common-go"
 	"github.com/SWAN-community/swift-go"
@@ -137,6 +138,41 @@ func createResponseModel(
 			common.ReturnServerError(w, fmt.Errorf("new rid: %w", err))
 			return nil
 		}
+	}
+
+	// Set the expiry time on the cookies based on the configuration for the
+	// operators where DeleteDays contains the number of days that should elapse
+	// before the data is automatically removed.
+	e := s.config.DeleteDays
+	if m.RID != nil {
+		m.RID.GetCookie().Expires = m.RID.GetOWID().GetExpires(e)
+	}
+	if m.Pref != nil {
+		m.Pref.GetCookie().Expires = m.Pref.GetOWID().GetExpires(e)
+	}
+	if m.Email != nil {
+		m.Email.GetCookie().Expires = m.Email.GetOWID().GetExpires(e)
+	}
+	if m.Salt != nil {
+		m.Salt.GetCookie().Expires = m.Salt.GetOWID().GetExpires(e)
+	}
+	if m.SID != nil {
+
+		// The SID expiry time should be passed on the earliest of the email
+		// or the salt when they are available. If they are not available then
+		// the number of days since the creation time should be used.
+		var n time.Time
+		if m.Email != nil && m.Salt != nil {
+			a := m.Email.GetCookie().Expires
+			b := m.Salt.GetCookie().Expires
+			n = a
+			if b.Before(n) {
+				n = b
+			}
+		} else {
+			n = m.SID.GetOWID().GetExpires(e)
+		}
+		m.SID.GetCookie().Expires = n
 	}
 
 	return m
