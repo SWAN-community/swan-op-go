@@ -144,7 +144,7 @@ func createResponseModel(
 	// operators where DeleteDays contains the number of days that should elapse
 	// before the data is automatically removed.
 	e := s.config.DeleteDays
-	if m.RID != nil {
+	if m.RID != nil && m.RID.IsSigned() {
 		m.RID.GetCookie().Expires = m.RID.GetOWID().GetExpires(e)
 	}
 	if m.Pref != nil {
