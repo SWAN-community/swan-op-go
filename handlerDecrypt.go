@@ -213,12 +213,13 @@ func getSWIFTResults(
 	s *services,
 	w http.ResponseWriter,
 	r *http.Request) *swift.Results {
+	const param = "encrypted"
 
 	// Validate that the encrypted parameter is present.
-	v := r.Form.Get("encrypted")
+	v := r.Form.Get(param)
 	if v == "" {
 		common.ReturnApplicationError(w, &common.HttpError{
-			Message: "missing 'encrypted' parameter",
+			Message: "missing '" + param + "' parameter",
 			Code:    http.StatusBadRequest})
 		return nil
 	}
@@ -227,7 +228,7 @@ func getSWIFTResults(
 	d, err := base64.RawURLEncoding.DecodeString(v)
 	if err != nil {
 		common.ReturnApplicationError(w, &common.HttpError{
-			Message: "not url encoded base64 string",
+			Message: "'" + param + "' not url encoded base64 string",
 			Code:    http.StatusBadRequest})
 		return nil
 	}
@@ -235,7 +236,10 @@ func getSWIFTResults(
 	// Decrypt the string with the access node.
 	o, err := decryptAndDecode(s.swift, r.Host, d)
 	if err != nil {
-		common.ReturnServerError(w, err)
+		common.ReturnApplicationError(w, &common.HttpError{
+			Error:   err,
+			Message: "'" + param + "' invalid",
+			Code:    http.StatusBadRequest})
 		return nil
 	}
 
