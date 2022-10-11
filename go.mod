@@ -4,10 +4,10 @@ go 1.19
 
 require (
 	github.com/SWAN-community/access-go v0.1.0
-	github.com/SWAN-community/common-go v0.1.4-0.20221006162833-67646891d4da
+	github.com/SWAN-community/common-go v0.1.4-0.20221011170842-61d2421c1170
 	github.com/SWAN-community/config-go v0.1.5
-	github.com/SWAN-community/owid-go v0.1.9-0.20221009195418-315f6fc9bdfb
-	github.com/SWAN-community/swan-go v0.1.10-0.20221011145400-ba7c03ea7b3c
+	github.com/SWAN-community/owid-go v0.1.9-0.20221011172733-c8e6a3ba6e85
+	github.com/SWAN-community/swan-go v0.1.10-0.20221011172953-7c23eb6038a0
 	github.com/SWAN-community/swift-go v0.1.7-0.20220916140926-924d23437419
 	github.com/google/uuid v1.3.0
 )
