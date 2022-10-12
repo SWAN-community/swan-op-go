@@ -35,8 +35,8 @@ type Request struct {
 	swan.ModelRequest
 }
 
-// UnmarshalSwift adds the SWIFT pairs to the data model and also creates SID
-// and RID values if not provided from SWIFT.
+// UnmarshalSwift adds the SWIFT pairs to the data model and also creates the
+// SID from the email and salt if not contained in the SWIFT results.
 func (m *Response) UnmarshalSwift(
 	r *swift.Results,
 	s *services,
@@ -45,26 +45,10 @@ func (m *Response) UnmarshalSwift(
 	if err != nil {
 		return err
 	}
-	m.newRID(s, q)
-	if err != nil {
-		return err
-	}
 	m.setSID(s, q)
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-// newRID sets a new RID in the model and return true if successful, otherwise
-// false. All the HTTP errors are handled by the implementation.
-func (m *Response) newRID(s *services, r *http.Request) error {
-	var err error
-	m.RID, err = createRID(s, r)
-	if err != nil {
-		return err
-	}
-	m.RID.GetCookie().Expires = getExpires(s, m.RID.GetOWID())
 	return nil
 }
 
