@@ -52,6 +52,18 @@ func (m *Response) UnmarshalSwift(
 	return nil
 }
 
+// newRID sets a new RID in the model and return true if successful, otherwise
+// false. All the HTTP errors are handled by the implementation.
+func (m *Response) newRID(s *services, r *http.Request) error {
+	var err error
+	m.RID, err = createRID(s, r)
+	if err != nil {
+		return err
+	}
+	m.RID.GetCookie().Expires = getExpires(s, m.RID.GetOWID())
+	return nil
+}
+
 // setSID uses the Email and Salt to populate the SID data if they are present
 // and contain valid data.
 func (m *Response) setSID(s *services, r *http.Request) error {
