@@ -45,7 +45,7 @@ func (m *Response) UnmarshalSwift(
 	if err != nil {
 		return err
 	}
-	m.setSID(s, q)
+	err = m.setSID(s, q)
 	if err != nil {
 		return err
 	}
