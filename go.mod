@@ -6,8 +6,8 @@ require (
 	github.com/SWAN-community/access-go v0.1.0
 	github.com/SWAN-community/common-go v0.1.4-0.20221011170842-61d2421c1170
 	github.com/SWAN-community/config-go v0.1.5
-	github.com/SWAN-community/owid-go v0.1.9-0.20221011172733-c8e6a3ba6e85
-	github.com/SWAN-community/swan-go v0.1.10-0.20221011184947-720d63f31e9c
+	github.com/SWAN-community/owid-go v0.1.9-0.20221015132244-36e4827ac186
+	github.com/SWAN-community/swan-go v0.1.10-0.20221015132609-5830a3ef7c22
 	github.com/SWAN-community/swift-go v0.1.7-0.20220916140926-924d23437419
 	github.com/google/uuid v1.3.0
 )
