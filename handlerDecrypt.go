@@ -174,6 +174,8 @@ func createResponseModel(
 		}
 		m.SID.GetCookie().Expires = n
 	}
+
+	// Set the refresh cookie.
 	m.Ref.GetCookie()
 
 	return m
