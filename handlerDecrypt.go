@@ -174,6 +174,7 @@ func createResponseModel(
 		}
 		m.SID.GetCookie().Expires = n
 	}
+	m.Ref.GetCookie()
 
 	return m
 }
